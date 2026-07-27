@@ -2,7 +2,11 @@
 
 import { useRef, useState, useTransition, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import {
+  uploadProjectFile,
+  getProjectFileLink,
+  deleteProjectFile,
+} from "@/app/(main)/projects/files-actions";
 import type { ProjectFile } from "@/types/project";
 
 function formatSize(bytes: number | null) {
@@ -38,44 +42,16 @@ export default function ProjectFiles({
     setError(null);
     setUploading(true);
 
-    const supabase = createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const formData = new FormData();
+    formData.set("file", file);
+    formData.set("project_id", projectId);
+    if (workLogId) formData.set("work_log_id", workLogId);
 
-    if (!user) {
-      setError("로그인이 필요합니다.");
-      setUploading(false);
-      return;
-    }
-
-    const safeName = file.name.replace(/[^\w.\-가-힣]/g, "_");
-    const path = `${user.id}/${projectId}/${Date.now()}_${safeName}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from("project-files")
-      .upload(path, file);
-
-    if (uploadError) {
-      setError(uploadError.message);
-      setUploading(false);
-      return;
-    }
-
-    const { error: insertError } = await supabase.from("project_files").insert({
-      project_id: projectId,
-      work_log_id: workLogId ?? null,
-      user_id: user.id,
-      file_path: path,
-      file_name: file.name,
-      file_type: file.type || null,
-      file_size: file.size,
-    });
-
+    const result = await uploadProjectFile(formData);
     setUploading(false);
 
-    if (insertError) {
-      setError(insertError.message);
+    if (result?.error) {
+      setError(result.error);
       return;
     }
 
@@ -85,23 +61,18 @@ export default function ProjectFiles({
   }
 
   async function handleDownload(f: ProjectFile) {
-    const supabase = createClient();
-    const { data, error: urlError } = await supabase.storage
-      .from("project-files")
-      .createSignedUrl(f.file_path, 60);
+    const { url, error: linkError } = await getProjectFileLink(f.id);
 
-    if (urlError || !data) {
-      setError(urlError?.message ?? "다운로드 링크 생성에 실패했습니다.");
+    if (linkError || !url) {
+      setError(linkError ?? "다운로드 링크 생성에 실패했습니다.");
       return;
     }
-    window.open(data.signedUrl, "_blank");
+    window.open(url, "_blank");
   }
 
   function handleDelete(f: ProjectFile) {
     startTransition(async () => {
-      const supabase = createClient();
-      await supabase.storage.from("project-files").remove([f.file_path]);
-      await supabase.from("project_files").delete().eq("id", f.id);
+      await deleteProjectFile(f.id, f.file_path, projectId);
       router.refresh();
     });
   }
