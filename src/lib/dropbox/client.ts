@@ -4,6 +4,15 @@ const DROPBOX_REFRESH_TOKEN = process.env.DROPBOX_REFRESH_TOKEN!;
 
 let cachedToken: { accessToken: string; expiresAt: number } | null = null;
 
+// Dropbox-API-Arg 헤더는 ASCII만 허용하므로, 한글 등 비ASCII 문자는 \uXXXX로 이스케이프한다.
+// https://www.dropbox.com/developers/reference/json-encoding
+function encodeApiArg(arg: unknown): string {
+  return JSON.stringify(arg).replace(
+    /[^\x20-\x7e]/g,
+    (c) => "\\u" + c.charCodeAt(0).toString(16).padStart(4, "0")
+  );
+}
+
 async function getAccessToken(): Promise<string> {
   if (cachedToken && cachedToken.expiresAt > Date.now() + 60_000) {
     return cachedToken.accessToken;
@@ -41,7 +50,7 @@ export async function uploadToDropbox(path: string, file: File): Promise<void> {
     headers: {
       Authorization: `Bearer ${accessToken}`,
       "Content-Type": "application/octet-stream",
-      "Dropbox-API-Arg": JSON.stringify({
+      "Dropbox-API-Arg": encodeApiArg({
         path,
         mode: "add",
         autorename: true,
