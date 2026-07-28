@@ -1,10 +1,15 @@
 import type { LogType } from "./journal";
 
-export type ProjectPhase = "design" | "permit" | "construction" | "completed";
+export type ProjectPhase =
+  | "design"
+  | "permit"
+  | "construction"
+  | "supervision"
+  | "completed";
 
 export const PHASES_BY_TYPE: Record<LogType, ProjectPhase[]> = {
   design: ["design", "permit"],
-  build: ["construction", "completed"],
+  build: ["construction", "supervision", "completed"],
 };
 
 export interface Project {
@@ -79,6 +84,7 @@ export const PHASE_OPTIONS: ProjectPhase[] = [
   "design",
   "permit",
   "construction",
+  "supervision",
   "completed",
 ];
 
@@ -86,6 +92,7 @@ export const PHASE_LABEL: Record<ProjectPhase, string> = {
   design: "설계",
   permit: "인허가",
   construction: "시공",
+  supervision: "감리",
   completed: "준공",
 };
 
@@ -93,5 +100,6 @@ export const PHASE_BADGE_CLASS: Record<ProjectPhase, string> = {
   design: "bg-blue-50 text-blue-700",
   permit: "bg-amber-50 text-amber-700",
   construction: "bg-brand-50 text-brand-700",
+  supervision: "bg-purple-50 text-purple-700",
   completed: "bg-green-50 text-green-700",
 };
