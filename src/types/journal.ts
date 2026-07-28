@@ -21,11 +21,9 @@ export const CATEGORY_OPTIONS = [
 export type CategoryName = (typeof CATEGORY_OPTIONS)[number];
 
 export const BUILD_CATEGORY_OPTIONS = [
-  "공정",
-  "검측",
-  "협의",
-  "안전",
-  "품질",
+  "건축",
+  "인테리어",
+  "감리",
   "기타",
 ] as const;
 
