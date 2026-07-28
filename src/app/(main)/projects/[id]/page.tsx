@@ -5,9 +5,8 @@ import ProjectInfoCard from "@/components/ProjectInfoCard";
 import ProgressNotes from "@/components/ProgressNotes";
 import ProjectContacts from "@/components/ProjectContacts";
 import ProjectFiles from "@/components/ProjectFiles";
-import ProjectChecklist from "@/components/ProjectChecklist";
 import ProjectJournalTabs from "@/components/ProjectJournalTabs";
-import type { Project, ProjectContact, ProjectFile, ChecklistItem } from "@/types/project";
+import type { Project, ProjectContact, ProjectFile } from "@/types/project";
 import type { WorkLog } from "@/types/journal";
 
 export default async function ProjectDetailPage({
@@ -42,12 +41,6 @@ export default async function ProjectDetailPage({
     .eq("project_id", id)
     .is("work_log_id", null)
     .order("created_at", { ascending: false });
-
-  const { data: checklistItems } = await supabase
-    .from("project_checklist_items")
-    .select("*")
-    .eq("project_id", id)
-    .order("created_at", { ascending: true });
 
   const { data: logs } = await supabase
     .from("work_logs")
@@ -85,12 +78,6 @@ export default async function ProjectDetailPage({
         files={(files ?? []) as ProjectFile[]}
         title="문서함 (도면, 계약서 등)"
       />
-      <ProjectChecklist
-        projectId={p.id}
-        items={(checklistItems ?? []) as ChecklistItem[]}
-        contacts={(contacts ?? []) as ProjectContact[]}
-      />
-
       <ProjectJournalTabs
         project={p}
         date={todayKST()}

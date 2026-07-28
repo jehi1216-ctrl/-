@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { href: "/dashboard", label: "오늘 입력" },
   { href: "/journal", label: "전체 목록" },
   { href: "/calendar", label: "캘린더" },
+  { href: "/checklist", label: "체크리스트" },
 ];
 
 export default function Navbar({ email }: { email?: string | null }) {

@@ -46,6 +46,7 @@ export async function addChecklistItem(
 
   revalidatePath(`/projects/${projectId}`);
   revalidatePath("/dashboard");
+  revalidatePath("/checklist");
   return { error: null, success: true, submittedAt: Date.now() };
 }
 
@@ -64,6 +65,7 @@ export async function updateChecklistItemStatus(
 
   revalidatePath(`/projects/${projectId}`);
   revalidatePath("/dashboard");
+  revalidatePath("/checklist");
 }
 
 export async function deleteChecklistItem(projectId: string, itemId: string) {
@@ -72,4 +74,5 @@ export async function deleteChecklistItem(projectId: string, itemId: string) {
   if (error) console.error("deleteChecklistItem failed:", error.message);
   revalidatePath(`/projects/${projectId}`);
   revalidatePath("/dashboard");
+  revalidatePath("/checklist");
 }
