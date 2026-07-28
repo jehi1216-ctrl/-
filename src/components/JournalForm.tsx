@@ -7,9 +7,11 @@ import {
   initialFormState,
   type FormState,
 } from "@/app/(main)/dashboard/formState";
-import type { Project, ChecklistItem } from "@/types/project";
+import type { Project, ChecklistItem, ProjectContact } from "@/types/project";
+import { LOG_TYPE_LABEL, type LogType } from "@/types/journal";
 import ProjectChecklist from "./ProjectChecklist";
 import CategoryFieldset from "./CategoryFieldset";
+import BuildCategoryFieldset from "./BuildCategoryFieldset";
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -29,13 +31,17 @@ export default function JournalForm({
   projects,
   defaultProjectId,
   checklistsByProject = {},
+  contactsByProject = {},
   showChecklist = true,
+  lockedLogType,
 }: {
   date: string;
   projects: Project[];
   defaultProjectId?: string;
   checklistsByProject?: Record<string, ChecklistItem[]>;
+  contactsByProject?: Record<string, ProjectContact[]>;
   showChecklist?: boolean;
+  lockedLogType?: LogType;
 }) {
   const [state, formAction] = useActionState<FormState, FormData>(
     createLog,
@@ -43,7 +49,9 @@ export default function JournalForm({
   );
   const formRef = useRef<HTMLFormElement>(null);
   const [projectId, setProjectId] = useState(defaultProjectId ?? "");
+  const [logType, setLogType] = useState<LogType>(lockedLogType ?? "design");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [checklistOpen, setChecklistOpen] = useState(false);
   const [lastHandledSubmit, setLastHandledSubmit] = useState(state.submittedAt);
 
   if (state.success && state.submittedAt !== lastHandledSubmit) {
@@ -63,6 +71,11 @@ export default function JournalForm({
     );
   }
 
+  function changeLogType(next: LogType) {
+    setLogType(next);
+    setSelectedCategories([]);
+  }
+
   return (
     <form
       ref={formRef}
@@ -70,11 +83,31 @@ export default function JournalForm({
       className="space-y-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6"
     >
       <input type="hidden" name="date" value={date} />
+      <input type="hidden" name="log_type" value={logType} />
 
       {state.error && (
         <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">
           {state.error}
         </p>
+      )}
+
+      {!lockedLogType && (
+        <div className="flex gap-2">
+          {(["design", "build"] as const).map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => changeLogType(t)}
+              className={`rounded-md px-3 py-1.5 text-sm font-medium ${
+                logType === t
+                  ? "bg-brand-600 text-white"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              {LOG_TYPE_LABEL[t]}
+            </button>
+          ))}
+        </div>
       )}
 
       <div>
@@ -98,14 +131,6 @@ export default function JournalForm({
             </option>
           ))}
         </select>
-
-        {showChecklist && projectId && (
-          <ProjectChecklist
-            projectId={projectId}
-            items={checklistsByProject[projectId] ?? []}
-            compact
-          />
-        )}
       </div>
 
       <div>
@@ -120,9 +145,39 @@ export default function JournalForm({
           placeholder="오늘 한 일을 적어주세요"
           className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
         />
+
+        {showChecklist && projectId && (
+          <div className="mt-1.5">
+            <button
+              type="button"
+              onClick={() => setChecklistOpen((o) => !o)}
+              className="text-xs font-medium text-brand-600 hover:underline"
+            >
+              {checklistOpen
+                ? "체크리스트 접기"
+                : `+ 체크리스트 추가/보기${
+                    (checklistsByProject[projectId] ?? []).filter((i) => !i.is_done).length
+                      ? ` (${(checklistsByProject[projectId] ?? []).filter((i) => !i.is_done).length})`
+                      : ""
+                  }`}
+            </button>
+            {checklistOpen && (
+              <ProjectChecklist
+                projectId={projectId}
+                items={checklistsByProject[projectId] ?? []}
+                contacts={contactsByProject[projectId] ?? []}
+                compact
+              />
+            )}
+          </div>
+        )}
       </div>
 
-      <CategoryFieldset selectedCategories={selectedCategories} onToggle={toggleCategory} />
+      {logType === "design" ? (
+        <CategoryFieldset selectedCategories={selectedCategories} onToggle={toggleCategory} />
+      ) : (
+        <BuildCategoryFieldset selectedCategories={selectedCategories} onToggle={toggleCategory} />
+      )}
 
       <div>
         <label htmlFor="status" className="mb-1 block text-sm font-medium">

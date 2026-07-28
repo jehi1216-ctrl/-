@@ -6,7 +6,7 @@ import {
   updateLogStatus,
   deleteLog,
 } from "@/app/(main)/dashboard/actions";
-import { STATUS_LABEL, type WorkLog } from "@/types/journal";
+import { LOG_TYPE_LABEL, STATUS_LABEL, type WorkLog } from "@/types/journal";
 import { categoryBadges } from "@/lib/categoryDisplay";
 import ProjectFiles from "./ProjectFiles";
 import EditLogForm from "./EditLogForm";
@@ -55,6 +55,15 @@ export default function JournalEntryCard({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="mb-1.5 flex flex-wrap items-center gap-2">
+            <span
+              className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                log.log_type === "build"
+                  ? "bg-amber-100 text-amber-800"
+                  : "bg-blue-100 text-blue-800"
+              }`}
+            >
+              {LOG_TYPE_LABEL[log.log_type ?? "design"]}
+            </span>
             {projectName && (
               <Link
                 href={`/projects/${log.project_id}`}

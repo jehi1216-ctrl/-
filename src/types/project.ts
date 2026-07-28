@@ -40,13 +40,30 @@ export interface ProjectFile {
   created_at: string;
 }
 
+export type ChecklistStatus = "준비" | "협의중" | "진행중" | "완료";
+
+export const CHECKLIST_STATUS_OPTIONS: ChecklistStatus[] = [
+  "준비",
+  "협의중",
+  "진행중",
+  "완료",
+];
+
+export const CHECKLIST_STATUS_BADGE_CLASS: Record<ChecklistStatus, string> = {
+  준비: "bg-gray-100 text-gray-600",
+  협의중: "bg-amber-50 text-amber-700",
+  진행중: "bg-blue-50 text-blue-700",
+  완료: "bg-green-50 text-green-700",
+};
+
 export interface ChecklistItem {
   id: string;
   project_id: string;
   user_id: string;
   content: string;
   assignee: string | null;
-  due_date: string | null;
+  assignee_contact_id: string | null;
+  status: ChecklistStatus;
   is_done: boolean;
   created_at: string;
 }

@@ -5,11 +5,14 @@ import JournalEntryCard from "@/components/JournalEntryCard";
 import ProjectFilterSelect from "@/components/ProjectFilterSelect";
 import {
   CATEGORY_OPTIONS,
+  BUILD_CATEGORY_OPTIONS,
   REVIEW_SUBOPTIONS,
   DESIGN_SUBOPTIONS,
   PERMIT_DISCIPLINES,
   PERMIT_STAGES,
   CONSULT_SUBOPTIONS,
+  LOG_TYPE_LABEL,
+  type LogType,
   type WorkLog,
 } from "@/types/journal";
 import type { Project, ProjectFile } from "@/types/project";
@@ -43,6 +46,7 @@ export default async function JournalPage({
   searchParams,
 }: {
   searchParams: Promise<{
+    type?: string;
     category?: string;
     sub?: string;
     project?: string;
@@ -55,13 +59,18 @@ export default async function JournalPage({
   } = await supabase.auth.getUser();
 
   const {
+    type: activeTypeRaw,
     category: activeCategory,
     sub: activeSub,
     project: activeProject,
     date: activeDate,
   } = await searchParams;
 
+  const activeType =
+    activeTypeRaw === "design" || activeTypeRaw === "build" ? (activeTypeRaw as LogType) : undefined;
+
   function buildHref(overrides: {
+    type?: string;
     category?: string;
     sub?: string;
     project?: string;
@@ -69,12 +78,14 @@ export default async function JournalPage({
   }) {
     const params = new URLSearchParams();
     const next = {
+      type: activeType,
       category: activeCategory,
       sub: activeSub,
       project: activeProject,
       date: activeDate,
       ...overrides,
     };
+    if (next.type) params.set("type", next.type);
     if (next.category) params.set("category", next.category);
     if (next.sub) params.set("sub", next.sub);
     if (next.project) params.set("project", next.project);
@@ -99,6 +110,9 @@ export default async function JournalPage({
     .order("date", { ascending: false })
     .order("created_at", { ascending: false });
 
+  if (activeType) {
+    query = query.eq("log_type", activeType);
+  }
   if (activeCategory) {
     query = query.contains("categories", [activeCategory]);
   }
@@ -112,7 +126,7 @@ export default async function JournalPage({
   const { data: logs } = await query;
   let allLogs = (logs ?? []) as WorkLog[];
 
-  if (activeSub && activeCategory && SUBCATEGORY_OPTIONS[activeCategory]) {
+  if (activeSub && activeCategory && activeType !== "build" && SUBCATEGORY_OPTIONS[activeCategory]) {
     allLogs = allLogs.filter((log) => getSubValues(log, activeCategory).includes(activeSub));
   }
 
@@ -133,7 +147,8 @@ export default async function JournalPage({
     }
   }
 
-  const subOptions = activeCategory ? SUBCATEGORY_OPTIONS[activeCategory] : undefined;
+  const subOptions =
+    activeCategory && activeType !== "build" ? SUBCATEGORY_OPTIONS[activeCategory] : undefined;
 
   return (
     <div className="space-y-6">
@@ -154,6 +169,34 @@ export default async function JournalPage({
 
       <div className="flex flex-wrap items-center gap-2">
         <Link
+          href={buildHref({ type: undefined, category: undefined, sub: undefined })}
+          className={`rounded-full px-3 py-1.5 text-xs font-medium ${
+            !activeType
+              ? "bg-gray-800 text-white"
+              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+          }`}
+        >
+          전체
+        </Link>
+        {(["design", "build"] as const).map((t) => (
+          <Link
+            key={t}
+            href={buildHref({ type: t, category: undefined, sub: undefined })}
+            className={`rounded-full px-3 py-1.5 text-xs font-medium ${
+              activeType === t
+                ? "bg-gray-800 text-white"
+                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+            }`}
+          >
+            {LOG_TYPE_LABEL[t]}
+          </Link>
+        ))}
+        <span className="mx-1 h-4 w-px bg-gray-200" />
+        <ProjectFilterSelect projects={projectList} />
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <Link
           href={buildHref({ category: undefined, sub: undefined })}
           className={`rounded-full px-3 py-1.5 text-xs font-medium ${
             !activeCategory
@@ -163,7 +206,7 @@ export default async function JournalPage({
         >
           전체
         </Link>
-        {CATEGORY_OPTIONS.map((category) => (
+        {(activeType === "build" ? BUILD_CATEGORY_OPTIONS : CATEGORY_OPTIONS).map((category) => (
           <Link
             key={category}
             href={buildHref({ category, sub: undefined })}
@@ -176,8 +219,6 @@ export default async function JournalPage({
             {category}
           </Link>
         ))}
-        <span className="mx-1 h-4 w-px bg-gray-200" />
-        <ProjectFilterSelect projects={projectList} />
       </div>
 
       {subOptions && (

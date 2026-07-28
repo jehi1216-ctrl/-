@@ -3,13 +3,17 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { todayKST } from "@/lib/date";
-import { NUMBERED_CATEGORIES, type CategoryDetails, type JournalStatus } from "@/types/journal";
+import {
+  NUMBERED_CATEGORIES,
+  type CategoryDetails,
+  type JournalStatus,
+  type LogType,
+} from "@/types/journal";
 import type { FormState } from "./formState";
 
 const NUMBERED_FIELD_NAME: Record<(typeof NUMBERED_CATEGORIES)[number], string> = {
   협의: "consult_title",
   PT: "pt_title",
-  공사: "construction_title",
   브랜딩: "branding_title",
 };
 
@@ -83,6 +87,7 @@ export async function createLog(
   const categories = formData.getAll("categories").map((c) => String(c));
   const status = String(formData.get("status") ?? "in_progress") as JournalStatus;
   const date = String(formData.get("date") ?? todayKST());
+  const log_type = String(formData.get("log_type") ?? "design") as LogType;
 
   if (!project_id) {
     return { error: "프로젝트를 선택해주세요.", success: false };
@@ -94,7 +99,10 @@ export async function createLog(
     return { error: "카테고리를 하나 이상 선택해주세요.", success: false };
   }
 
-  const parsed = await buildCategoryDetails(supabase, formData, categories, project_id);
+  const parsed =
+    log_type === "design"
+      ? await buildCategoryDetails(supabase, formData, categories, project_id)
+      : { details: {} as CategoryDetails };
   if ("error" in parsed) {
     return { error: parsed.error, success: false };
   }
@@ -103,6 +111,7 @@ export async function createLog(
     user_id: user.id,
     project_id,
     date,
+    log_type,
     content,
     categories,
     category_details: parsed.details,
@@ -147,16 +156,19 @@ export async function updateLog(
     return { error: "카테고리를 하나 이상 선택해주세요.", success: false };
   }
 
-  const parsed = await buildCategoryDetails(
-    supabase,
-    formData,
-    categories,
-    existing.project_id,
-    {
-      categories: (existing.categories ?? []) as string[],
-      category_details: (existing.category_details ?? {}) as CategoryDetails,
-    }
-  );
+  const parsed: { error: string } | { details: CategoryDetails } =
+    existing.log_type === "build"
+      ? { details: {} }
+      : await buildCategoryDetails(
+          supabase,
+          formData,
+          categories,
+          existing.project_id,
+          {
+            categories: (existing.categories ?? []) as string[],
+            category_details: (existing.category_details ?? {}) as CategoryDetails,
+          }
+        );
   if ("error" in parsed) {
     return { error: parsed.error, success: false };
   }

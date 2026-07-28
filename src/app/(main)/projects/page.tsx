@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { PHASE_LABEL, PHASE_BADGE_CLASS, type Project } from "@/types/project";
+import type { Project, ChecklistItem } from "@/types/project";
+import ProjectListTabs from "@/components/ProjectListTabs";
 
 export default async function ProjectsPage() {
   const supabase = await createClient();
@@ -15,6 +16,19 @@ export default async function ProjectsPage() {
     .order("created_at", { ascending: false });
 
   const list = (projects ?? []) as Project[];
+
+  const { data: checklistItems } = await supabase
+    .from("project_checklist_items")
+    .select("*")
+    .eq("user_id", user!.id)
+    .neq("status", "완료");
+
+  const checklistsByProject = new Map<string, ChecklistItem[]>();
+  for (const item of (checklistItems ?? []) as ChecklistItem[]) {
+    const bucket = checklistsByProject.get(item.project_id) ?? [];
+    bucket.push(item);
+    checklistsByProject.set(item.project_id, bucket);
+  }
 
   return (
     <div className="space-y-6">
@@ -36,30 +50,10 @@ export default async function ProjectsPage() {
           등록된 프로젝트가 없어요.
         </p>
       ) : (
-        <ul className="space-y-3">
-          {list.map((p) => (
-            <li key={p.id}>
-              <Link
-                href={`/projects/${p.id}`}
-                className="block rounded-lg border border-gray-200 bg-white p-4 shadow-sm hover:border-brand-300"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <h2 className="font-medium">{p.name}</h2>
-                  <span
-                    className={`flex-shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${PHASE_BADGE_CLASS[p.phase]}`}
-                  >
-                    {PHASE_LABEL[p.phase]}
-                  </span>
-                </div>
-                {(p.client || p.site_address) && (
-                  <p className="mt-1 text-sm text-gray-500">
-                    {[p.client, p.site_address].filter(Boolean).join(" · ")}
-                  </p>
-                )}
-              </Link>
-            </li>
-          ))}
-        </ul>
+        <ProjectListTabs
+          projects={list}
+          checklistsByProject={Object.fromEntries(checklistsByProject)}
+        />
       )}
     </div>
   );

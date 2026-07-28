@@ -6,6 +6,7 @@ import { updateLog } from "@/app/(main)/dashboard/actions";
 import { initialFormState, type FormState } from "@/app/(main)/dashboard/formState";
 import type { WorkLog } from "@/types/journal";
 import CategoryFieldset from "./CategoryFieldset";
+import BuildCategoryFieldset from "./BuildCategoryFieldset";
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -67,11 +68,18 @@ export default function EditLogForm({
         className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
       />
 
-      <CategoryFieldset
-        selectedCategories={selectedCategories}
-        onToggle={toggleCategory}
-        defaultDetails={log.category_details}
-      />
+      {log.log_type === "build" ? (
+        <BuildCategoryFieldset
+          selectedCategories={selectedCategories}
+          onToggle={toggleCategory}
+        />
+      ) : (
+        <CategoryFieldset
+          selectedCategories={selectedCategories}
+          onToggle={toggleCategory}
+          defaultDetails={log.category_details}
+        />
+      )}
 
       <div>
         <label className="mb-1 block text-sm font-medium">상태</label>

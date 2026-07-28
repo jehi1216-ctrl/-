@@ -17,7 +17,6 @@ export const NUMBERED_FIELD_NAME: Record<
 > = {
   협의: "consult_title",
   PT: "pt_title",
-  공사: "construction_title",
   브랜딩: "branding_title",
 };
 

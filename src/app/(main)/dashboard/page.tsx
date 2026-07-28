@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { todayKST, formatDateLabel } from "@/lib/date";
-import JournalForm from "@/components/JournalForm";
+import TodayEntry from "@/components/TodayEntry";
 import JournalEntryCard from "@/components/JournalEntryCard";
 import ScheduleSection from "@/components/ScheduleSection";
 import type { WorkLog } from "@/types/journal";
-import type { Project, ProjectFile, ChecklistItem } from "@/types/project";
+import type { Project, ProjectFile, ChecklistItem, ProjectContact } from "@/types/project";
 import type { ScheduleItem } from "@/types/schedule";
 
 export default async function DashboardPage() {
@@ -35,6 +35,18 @@ export default async function DashboardPage() {
     const bucket = checklistsByProject.get(item.project_id) ?? [];
     bucket.push(item);
     checklistsByProject.set(item.project_id, bucket);
+  }
+
+  const { data: contactRows } = await supabase
+    .from("project_contacts")
+    .select("*")
+    .eq("user_id", user!.id);
+
+  const contactsByProject = new Map<string, ProjectContact[]>();
+  for (const c of (contactRows ?? []) as ProjectContact[]) {
+    const bucket = contactsByProject.get(c.project_id) ?? [];
+    bucket.push(c);
+    contactsByProject.set(c.project_id, bucket);
   }
 
   const { data: scheduleItems } = await supabase
@@ -86,10 +98,11 @@ export default async function DashboardPage() {
           해주세요.
         </p>
       ) : (
-        <JournalForm
+        <TodayEntry
           date={date}
           projects={projectList}
           checklistsByProject={Object.fromEntries(checklistsByProject)}
+          contactsByProject={Object.fromEntries(contactsByProject)}
         />
       )}
 

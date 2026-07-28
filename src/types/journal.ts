@@ -1,23 +1,42 @@
 export type JournalStatus = "in_progress" | "done";
 
+export type LogType = "design" | "build";
+
+export const LOG_TYPE_OPTIONS: LogType[] = ["design", "build"];
+
+export const LOG_TYPE_LABEL: Record<LogType, string> = {
+  design: "DESIGN",
+  build: "BUILD",
+};
+
 export const CATEGORY_OPTIONS = [
   "검토",
   "협의",
   "설계",
   "PT",
   "대관",
-  "공사",
   "브랜딩",
 ] as const;
 
 export type CategoryName = (typeof CATEGORY_OPTIONS)[number];
+
+export const BUILD_CATEGORY_OPTIONS = [
+  "공정",
+  "검측",
+  "협의",
+  "안전",
+  "품질",
+  "기타",
+] as const;
+
+export type BuildCategoryName = (typeof BUILD_CATEGORY_OPTIONS)[number];
 
 export const REVIEW_SUBOPTIONS = ["규모검토", "디자인검토", "견적검토"] as const;
 export const DESIGN_SUBOPTIONS = ["법적근거", "CAD", "3D"] as const;
 export const PERMIT_DISCIPLINES = ["건축", "토목", "구조"] as const;
 export const PERMIT_STAGES = ["심의", "허가", "사용승인"] as const;
 export const CONSULT_SUBOPTIONS = ["구조", "토목", "MEP", "업체협의"] as const;
-export const NUMBERED_CATEGORIES = ["협의", "PT", "공사", "브랜딩"] as const;
+export const NUMBERED_CATEGORIES = ["협의", "PT", "브랜딩"] as const;
 
 export interface NumberedEntry {
   seq: number;
@@ -31,7 +50,6 @@ export interface CategoryDetails {
   협의_sub?: string[];
   협의?: NumberedEntry;
   PT?: NumberedEntry;
-  공사?: NumberedEntry;
   브랜딩?: NumberedEntry;
 }
 
@@ -40,6 +58,7 @@ export interface WorkLog {
   user_id: string;
   project_id: string;
   date: string; // YYYY-MM-DD
+  log_type: LogType;
   content: string;
   categories: string[];
   category_details: CategoryDetails;

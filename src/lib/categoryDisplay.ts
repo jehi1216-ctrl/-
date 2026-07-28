@@ -1,6 +1,10 @@
 import type { WorkLog } from "@/types/journal";
 
 export function categoryBadges(log: WorkLog): string[] {
+  if (log.log_type === "build") {
+    return [...log.categories];
+  }
+
   const d = log.category_details ?? {};
   const badges: string[] = [];
 
@@ -28,7 +32,7 @@ export function categoryBadges(log: WorkLog): string[] {
     );
   }
 
-  for (const key of ["PT", "공사", "브랜딩"] as const) {
+  for (const key of ["PT", "브랜딩"] as const) {
     if (log.categories.includes(key)) {
       const entry = d[key];
       badges.push(

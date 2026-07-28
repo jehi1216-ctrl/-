@@ -6,8 +6,7 @@ import ProgressNotes from "@/components/ProgressNotes";
 import ProjectContacts from "@/components/ProjectContacts";
 import ProjectFiles from "@/components/ProjectFiles";
 import ProjectChecklist from "@/components/ProjectChecklist";
-import JournalForm from "@/components/JournalForm";
-import JournalEntryCard from "@/components/JournalEntryCard";
+import ProjectJournalTabs from "@/components/ProjectJournalTabs";
 import type { Project, ProjectContact, ProjectFile, ChecklistItem } from "@/types/project";
 import type { WorkLog } from "@/types/journal";
 
@@ -58,6 +57,8 @@ export default async function ProjectDetailPage({
     .order("created_at", { ascending: false });
 
   const projectLogs = (logs ?? []) as WorkLog[];
+  const designLogs = projectLogs.filter((l) => (l.log_type ?? "design") === "design");
+  const buildLogs = projectLogs.filter((l) => l.log_type === "build");
 
   const logIds = projectLogs.map((l) => l.id);
   const filesByLog = new Map<string, ProjectFile[]>();
@@ -84,31 +85,20 @@ export default async function ProjectDetailPage({
         files={(files ?? []) as ProjectFile[]}
         title="문서함 (도면, 계약서 등)"
       />
-      <ProjectChecklist projectId={p.id} items={(checklistItems ?? []) as ChecklistItem[]} />
-
-      <JournalForm
-        date={todayKST()}
-        projects={[p]}
-        defaultProjectId={p.id}
-        showChecklist={false}
+      <ProjectChecklist
+        projectId={p.id}
+        items={(checklistItems ?? []) as ChecklistItem[]}
+        contacts={(contacts ?? []) as ProjectContact[]}
       />
 
-      <div>
-        <h2 className="mb-2 text-sm font-medium text-gray-500">
-          이 현장 업무 기록 ({projectLogs.length})
-        </h2>
-        {projectLogs.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-gray-300 p-6 text-center text-sm text-gray-400">
-            아직 작성한 업무 일지가 없어요.
-          </p>
-        ) : (
-          <ul className="space-y-3">
-            {projectLogs.map((log) => (
-              <JournalEntryCard key={log.id} log={log} files={filesByLog.get(log.id)} />
-            ))}
-          </ul>
-        )}
-      </div>
+      <ProjectJournalTabs
+        project={p}
+        date={todayKST()}
+        designLogs={designLogs}
+        buildLogs={buildLogs}
+        filesByLog={Object.fromEntries(filesByLog)}
+        contacts={(contacts ?? []) as ProjectContact[]}
+      />
     </div>
   );
 }
