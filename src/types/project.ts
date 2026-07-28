@@ -1,4 +1,11 @@
+import type { LogType } from "./journal";
+
 export type ProjectPhase = "design" | "permit" | "construction" | "completed";
+
+export const PHASES_BY_TYPE: Record<LogType, ProjectPhase[]> = {
+  design: ["design", "permit"],
+  build: ["construction", "completed"],
+};
 
 export interface Project {
   id: string;

@@ -1,8 +1,14 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { PHASE_OPTIONS, PHASE_LABEL, type Project } from "@/types/project";
+import {
+  PHASE_LABEL,
+  PHASES_BY_TYPE,
+  type Project,
+  type ProjectPhase,
+} from "@/types/project";
+import { LOG_TYPE_OPTIONS, LOG_TYPE_LABEL, type LogType } from "@/types/journal";
 import type { ProjectFormState } from "@/app/(main)/projects/formState";
 
 const inputClass =
@@ -34,6 +40,18 @@ export default function ProjectForm({
   const [state, formAction] = useActionState<ProjectFormState, FormData>(action, {
     error: null,
   });
+
+  const [logType, setLogType] = useState<LogType>(
+    defaultValues?.phase && PHASES_BY_TYPE.build.includes(defaultValues.phase)
+      ? "build"
+      : "design"
+  );
+  const [phase, setPhase] = useState<ProjectPhase>(defaultValues?.phase ?? "design");
+
+  function handleLogTypeChange(next: LogType) {
+    setLogType(next);
+    setPhase(PHASES_BY_TYPE[next][0]);
+  }
 
   return (
     <form
@@ -85,7 +103,26 @@ export default function ProjectForm({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div>
+          <label className={labelClass}>구분</label>
+          <div className="flex gap-2">
+            {LOG_TYPE_OPTIONS.map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => handleLogTypeChange(t)}
+                className={`flex-1 rounded-md border px-3 py-2 text-sm font-medium ${
+                  logType === t
+                    ? "border-brand-500 bg-brand-50 text-brand-700"
+                    : "border-gray-300 text-gray-500 hover:bg-gray-50"
+                }`}
+              >
+                {LOG_TYPE_LABEL[t]}
+              </button>
+            ))}
+          </div>
+        </div>
         <div>
           <label htmlFor="phase" className={labelClass}>
             공정단계
@@ -93,16 +130,20 @@ export default function ProjectForm({
           <select
             id="phase"
             name="phase"
-            defaultValue={defaultValues?.phase ?? "design"}
+            value={phase}
+            onChange={(e) => setPhase(e.target.value as ProjectPhase)}
             className={inputClass}
           >
-            {PHASE_OPTIONS.map((phase) => (
-              <option key={phase} value={phase}>
-                {PHASE_LABEL[phase]}
+            {PHASES_BY_TYPE[logType].map((p) => (
+              <option key={p} value={p}>
+                {PHASE_LABEL[p]}
               </option>
             ))}
           </select>
         </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
           <label htmlFor="start_date" className={labelClass}>
             시작일

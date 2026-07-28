@@ -5,17 +5,12 @@ import Link from "next/link";
 import {
   PHASE_LABEL,
   PHASE_BADGE_CLASS,
+  PHASES_BY_TYPE,
   CHECKLIST_STATUS_BADGE_CLASS,
   type Project,
-  type ProjectPhase,
   type ChecklistItem,
 } from "@/types/project";
 import { LOG_TYPE_LABEL, type LogType } from "@/types/journal";
-
-const PHASES_BY_TYPE: Record<LogType, ProjectPhase[]> = {
-  design: ["design", "permit"],
-  build: ["construction", "completed"],
-};
 
 export default function ProjectListTabs({
   projects,
