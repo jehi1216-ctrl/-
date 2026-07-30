@@ -26,7 +26,22 @@ export interface Project {
   manager_name: string | null;
   manager_phone: string | null;
   progress_notes: string | null;
+  site_area: number | null;
+  building_area: number | null;
+  total_floor_area: number | null;
   created_at: string;
+}
+
+/** 건폐율(%) = 건축면적 / 대지면적 * 100 */
+export function buildingCoverageRatio(project: Pick<Project, "site_area" | "building_area">): number | null {
+  if (!project.site_area || !project.building_area) return null;
+  return (project.building_area / project.site_area) * 100;
+}
+
+/** 용적률(%) = 연면적 / 대지면적 * 100 */
+export function floorAreaRatio(project: Pick<Project, "site_area" | "total_floor_area">): number | null {
+  if (!project.site_area || !project.total_floor_area) return null;
+  return (project.total_floor_area / project.site_area) * 100;
 }
 
 export interface ProjectContact {

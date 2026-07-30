@@ -170,6 +170,51 @@ export default function ProjectForm({
         </div>
       </div>
 
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div>
+          <label htmlFor="site_area" className={labelClass}>
+            대지면적(m²)
+          </label>
+          <input
+            id="site_area"
+            name="site_area"
+            type="number"
+            min={0}
+            step="0.01"
+            defaultValue={defaultValues?.site_area ?? ""}
+            className={inputClass}
+          />
+        </div>
+        <div>
+          <label htmlFor="building_area" className={labelClass}>
+            건축면적(m²)
+          </label>
+          <input
+            id="building_area"
+            name="building_area"
+            type="number"
+            min={0}
+            step="0.01"
+            defaultValue={defaultValues?.building_area ?? ""}
+            className={inputClass}
+          />
+        </div>
+        <div>
+          <label htmlFor="total_floor_area" className={labelClass}>
+            연면적(m²)
+          </label>
+          <input
+            id="total_floor_area"
+            name="total_floor_area"
+            type="number"
+            min={0}
+            step="0.01"
+            defaultValue={defaultValues?.total_floor_area ?? ""}
+            className={inputClass}
+          />
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
           <label htmlFor="contract_amount" className={labelClass}>

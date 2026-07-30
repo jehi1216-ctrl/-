@@ -17,6 +17,9 @@ interface ProjectFields {
   contract_info: string | null;
   manager_name: string | null;
   manager_phone: string | null;
+  site_area: number | null;
+  building_area: number | null;
+  total_floor_area: number | null;
 }
 
 type ReadFieldsResult =
@@ -45,6 +48,26 @@ function readProjectFields(formData: FormData): ReadFieldsResult {
     contract_amount = parsed;
   }
 
+  const areaFields: Record<"site_area" | "building_area" | "total_floor_area", number | null> = {
+    site_area: null,
+    building_area: null,
+    total_floor_area: null,
+  };
+  const areaLabels = {
+    site_area: "대지면적",
+    building_area: "건축면적",
+    total_floor_area: "연면적",
+  } as const;
+  for (const key of Object.keys(areaFields) as (keyof typeof areaFields)[]) {
+    const raw = String(formData.get(key) ?? "").trim();
+    if (!raw) continue;
+    const parsed = Number(raw);
+    if (Number.isNaN(parsed) || parsed < 0) {
+      return { ok: false, error: `${areaLabels[key]}은(는) 0 이상의 숫자여야 합니다.` };
+    }
+    areaFields[key] = parsed;
+  }
+
   if (!name) {
     return { ok: false, error: "프로젝트명을 입력해주세요." };
   }
@@ -62,6 +85,7 @@ function readProjectFields(formData: FormData): ReadFieldsResult {
       contract_info,
       manager_name,
       manager_phone,
+      ...areaFields,
     },
   };
 }

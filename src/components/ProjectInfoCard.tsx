@@ -4,7 +4,15 @@ import { useState, useTransition } from "react";
 import ProjectForm from "./ProjectForm";
 import PhaseSelect from "./PhaseSelect";
 import { updateProject, deleteProject } from "@/app/(main)/projects/actions";
-import type { Project } from "@/types/project";
+import { buildingCoverageRatio, floorAreaRatio, type Project } from "@/types/project";
+
+function formatArea(value: number): string {
+  return `${value.toLocaleString()}m²`;
+}
+
+function formatRatio(value: number): string {
+  return `${value.toFixed(2)}%`;
+}
 
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
@@ -19,6 +27,8 @@ export default function ProjectInfoCard({ project }: { project: Project }) {
   const [editing, setEditing] = useState(false);
   const [isPending, startTransition] = useTransition();
   const boundUpdate = updateProject.bind(null, project.id);
+  const coverageRatio = buildingCoverageRatio(project);
+  const floorRatio = floorAreaRatio(project);
 
   function handleDelete() {
     if (
@@ -81,6 +91,21 @@ export default function ProjectInfoCard({ project }: { project: Project }) {
         {project.start_date && <InfoRow label="시작일" value={project.start_date} />}
         {project.expected_completion_date && (
           <InfoRow label="준공예정일" value={project.expected_completion_date} />
+        )}
+        {project.site_area != null && (
+          <InfoRow label="대지면적" value={formatArea(project.site_area)} />
+        )}
+        {project.building_area != null && (
+          <InfoRow label="건축면적" value={formatArea(project.building_area)} />
+        )}
+        {project.total_floor_area != null && (
+          <InfoRow label="연면적" value={formatArea(project.total_floor_area)} />
+        )}
+        {coverageRatio != null && (
+          <InfoRow label="건폐율" value={formatRatio(coverageRatio)} />
+        )}
+        {floorRatio != null && (
+          <InfoRow label="용적률" value={formatRatio(floorRatio)} />
         )}
         {project.contract_amount != null && (
           <InfoRow
