@@ -44,6 +44,14 @@ export function floorAreaRatio(project: Pick<Project, "site_area" | "total_floor
   return (project.total_floor_area / project.site_area) * 100;
 }
 
+export function formatArea(value: number): string {
+  return `${value.toLocaleString()}m²`;
+}
+
+export function formatRatio(value: number): string {
+  return `${value.toFixed(2)}%`;
+}
+
 export interface ProjectContact {
   id: string;
   project_id: string;

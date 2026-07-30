@@ -4,15 +4,13 @@ import { useState, useTransition } from "react";
 import ProjectForm from "./ProjectForm";
 import PhaseSelect from "./PhaseSelect";
 import { updateProject, deleteProject } from "@/app/(main)/projects/actions";
-import { buildingCoverageRatio, floorAreaRatio, type Project } from "@/types/project";
-
-function formatArea(value: number): string {
-  return `${value.toLocaleString()}m²`;
-}
-
-function formatRatio(value: number): string {
-  return `${value.toFixed(2)}%`;
-}
+import {
+  buildingCoverageRatio,
+  floorAreaRatio,
+  formatArea,
+  formatRatio,
+  type Project,
+} from "@/types/project";
 
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (

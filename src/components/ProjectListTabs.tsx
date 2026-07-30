@@ -7,9 +7,25 @@ import {
   PHASE_BADGE_CLASS,
   PHASES_BY_TYPE,
   CHECKLIST_STATUS_BADGE_CLASS,
+  buildingCoverageRatio,
+  floorAreaRatio,
+  formatArea,
+  formatRatio,
   type Project,
   type ChecklistItem,
 } from "@/types/project";
+
+function areaSummary(p: Project): string | null {
+  const parts: string[] = [];
+  if (p.site_area != null) parts.push(`대지 ${formatArea(p.site_area)}`);
+  if (p.building_area != null) parts.push(`건축 ${formatArea(p.building_area)}`);
+  if (p.total_floor_area != null) parts.push(`연면적 ${formatArea(p.total_floor_area)}`);
+  const coverage = buildingCoverageRatio(p);
+  if (coverage != null) parts.push(`건폐율 ${formatRatio(coverage)}`);
+  const floorRatio = floorAreaRatio(p);
+  if (floorRatio != null) parts.push(`용적률 ${formatRatio(floorRatio)}`);
+  return parts.length > 0 ? parts.join(" · ") : null;
+}
 import { LOG_TYPE_LABEL, type LogType } from "@/types/journal";
 
 export default function ProjectListTabs({
@@ -47,42 +63,46 @@ export default function ProjectListTabs({
         </p>
       ) : (
         <ul className="space-y-3">
-          {filtered.map((p) => (
-            <li key={p.id}>
-              <Link
-                href={`/projects/${p.id}`}
-                className="block rounded-lg border border-gray-200 bg-white p-4 shadow-sm hover:border-brand-300"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <h2 className="font-medium">{p.name}</h2>
-                  <span
-                    className={`flex-shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${PHASE_BADGE_CLASS[p.phase]}`}
-                  >
-                    {PHASE_LABEL[p.phase]}
-                  </span>
-                </div>
-                {(p.client || p.site_address) && (
-                  <p className="mt-1 text-sm text-gray-500">
-                    {[p.client, p.site_address].filter(Boolean).join(" · ")}
-                  </p>
-                )}
-                {(checklistsByProject[p.id] ?? []).length > 0 && (
-                  <ul className="mt-2 space-y-1 border-t border-gray-100 pt-2">
-                    {(checklistsByProject[p.id] ?? []).map((item) => (
-                      <li key={item.id} className="flex items-center gap-1.5 text-xs">
-                        <span
-                          className={`flex-shrink-0 rounded-full px-1.5 py-0.5 font-medium ${CHECKLIST_STATUS_BADGE_CLASS[item.status]}`}
-                        >
-                          {item.status}
-                        </span>
-                        <span className="truncate text-gray-600">{item.content}</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </Link>
-            </li>
-          ))}
+          {filtered.map((p) => {
+            const area = areaSummary(p);
+            return (
+              <li key={p.id}>
+                <Link
+                  href={`/projects/${p.id}`}
+                  className="block rounded-lg border border-gray-200 bg-white p-4 shadow-sm hover:border-brand-300"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <h2 className="font-medium">{p.name}</h2>
+                    <span
+                      className={`flex-shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${PHASE_BADGE_CLASS[p.phase]}`}
+                    >
+                      {PHASE_LABEL[p.phase]}
+                    </span>
+                  </div>
+                  {(p.client || p.site_address) && (
+                    <p className="mt-1 text-sm text-gray-500">
+                      {[p.client, p.site_address].filter(Boolean).join(" · ")}
+                    </p>
+                  )}
+                  {area && <p className="mt-1 text-xs text-gray-400">{area}</p>}
+                  {(checklistsByProject[p.id] ?? []).length > 0 && (
+                    <ul className="mt-2 space-y-1 border-t border-gray-100 pt-2">
+                      {(checklistsByProject[p.id] ?? []).map((item) => (
+                        <li key={item.id} className="flex items-center gap-1.5 text-xs">
+                          <span
+                            className={`flex-shrink-0 rounded-full px-1.5 py-0.5 font-medium ${CHECKLIST_STATUS_BADGE_CLASS[item.status]}`}
+                          >
+                            {item.status}
+                          </span>
+                          <span className="truncate text-gray-600">{item.content}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>
