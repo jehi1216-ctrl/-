@@ -44,8 +44,12 @@ export function floorAreaRatio(project: Pick<Project, "site_area" | "total_floor
   return (project.total_floor_area / project.site_area) * 100;
 }
 
+/** 1평 = 400/121 m² (정의값) */
+const SQM_PER_PYEONG = 400 / 121;
+
 export function formatArea(value: number): string {
-  return `${value.toLocaleString()}m²`;
+  const pyeong = value / SQM_PER_PYEONG;
+  return `${value.toLocaleString()}m² (${pyeong.toFixed(2)}평)`;
 }
 
 export function formatRatio(value: number): string {
