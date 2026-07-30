@@ -77,6 +77,7 @@ export interface ChecklistItem {
   assignee_contact_id: string | null;
   status: ChecklistStatus;
   is_done: boolean;
+  note: string | null;
   created_at: string;
 }
 

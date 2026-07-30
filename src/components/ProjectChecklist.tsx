@@ -1,8 +1,9 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useTransition } from "react";
+import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 import {
   addChecklistItem,
+  updateChecklistItem,
   updateChecklistItemStatus,
   deleteChecklistItem,
 } from "@/app/(main)/projects/checklist-actions";
@@ -42,6 +43,7 @@ export default function ProjectChecklist({
   groupByAssignee?: boolean;
 }) {
   const [isPending, startTransition] = useTransition();
+  const [editingId, setEditingId] = useState<string | null>(null);
   const boundAdd = addChecklistItem.bind(null, projectId);
   const [state, formAction] = useActionState<FormState, FormData>(boundAdd, initialFormState);
   const formRef = useRef<HTMLFormElement>(null);
@@ -61,6 +63,13 @@ export default function ProjectChecklist({
     startTransition(() => deleteChecklistItem(projectId, itemId));
   }
 
+  function handleUpdate(itemId: string, formData: FormData) {
+    startTransition(async () => {
+      await updateChecklistItem(projectId, itemId, formData);
+      setEditingId(null);
+    });
+  }
+
   const sorted = [...items].sort(
     (a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status]
   );
@@ -77,6 +86,65 @@ export default function ProjectChecklist({
   }`;
 
   function renderItem(item: ChecklistItem) {
+    if (editingId === item.id) {
+      return (
+        <li
+          key={item.id}
+          className={`rounded-md border border-brand-200 bg-brand-50/30 ${
+            compact ? "px-2 py-1.5" : "px-3 py-2"
+          }`}
+        >
+          <form
+            action={(formData) => handleUpdate(item.id, formData)}
+            className="grid grid-cols-2 gap-2 sm:grid-cols-4"
+          >
+            <input
+              name="content"
+              required
+              defaultValue={item.content}
+              placeholder="할 일 *"
+              className={`col-span-2 ${inputClass} sm:col-span-4`}
+            />
+            <select
+              name="assignee_contact_id"
+              defaultValue={item.assignee_contact_id ?? ""}
+              className={inputClass}
+            >
+              <option value="">담당자 없음</option>
+              {contacts.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {contactLabel(c)}
+                </option>
+              ))}
+            </select>
+            <input
+              name="note"
+              defaultValue={item.note ?? ""}
+              placeholder="코멘트"
+              className={`col-span-2 ${inputClass} sm:col-span-3`}
+            />
+            <div className="col-span-2 flex gap-2 sm:col-span-4">
+              <button
+                type="submit"
+                disabled={isPending}
+                className="flex-1 rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+              >
+                저장
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditingId(null)}
+                disabled={isPending}
+                className="flex-1 rounded-md bg-gray-100 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-200"
+              >
+                취소
+              </button>
+            </div>
+          </form>
+        </li>
+      );
+    }
+
     return (
       <li
         key={item.id}
@@ -116,15 +184,27 @@ export default function ProjectChecklist({
                   )
                 );
               })()}
+            {item.note && (
+              <span className="block text-xs text-gray-400">💬 {item.note}</span>
+            )}
           </span>
         </div>
-        <button
-          onClick={() => handleDelete(item.id)}
-          disabled={isPending}
-          className="flex-shrink-0 text-gray-400 hover:text-red-500"
-        >
-          삭제
-        </button>
+        <div className="flex flex-shrink-0 items-center gap-2">
+          <button
+            onClick={() => setEditingId(item.id)}
+            disabled={isPending}
+            className="text-gray-400 hover:text-brand-600"
+          >
+            수정
+          </button>
+          <button
+            onClick={() => handleDelete(item.id)}
+            disabled={isPending}
+            className="text-gray-400 hover:text-red-500"
+          >
+            삭제
+          </button>
+        </div>
       </li>
     );
   }

@@ -50,6 +50,31 @@ export async function addChecklistItem(
   return { error: null, success: true, submittedAt: Date.now() };
 }
 
+export async function updateChecklistItem(
+  projectId: string,
+  itemId: string,
+  formData: FormData
+) {
+  const supabase = await createClient();
+
+  const content = String(formData.get("content") ?? "").trim();
+  if (!content) return;
+
+  const assignee_contact_id = String(formData.get("assignee_contact_id") ?? "").trim() || null;
+  const note = String(formData.get("note") ?? "").trim() || null;
+
+  const { error } = await supabase
+    .from("project_checklist_items")
+    .update({ content, assignee_contact_id, note })
+    .eq("id", itemId);
+
+  if (error) console.error("updateChecklistItem failed:", error.message);
+
+  revalidatePath(`/projects/${projectId}`);
+  revalidatePath("/dashboard");
+  revalidatePath("/checklist");
+}
+
 export async function updateChecklistItemStatus(
   projectId: string,
   itemId: string,
