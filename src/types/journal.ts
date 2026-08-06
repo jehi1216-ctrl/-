@@ -1,4 +1,4 @@
-export type JournalStatus = "in_progress" | "done";
+export type JournalStatus = "todo" | "waiting" | "done";
 
 export type LogType = "design" | "build";
 
@@ -58,13 +58,25 @@ export interface WorkLog {
   date: string; // YYYY-MM-DD
   log_type: LogType;
   content: string;
+  result: string | null;
   categories: string[];
   category_details: CategoryDetails;
   status: JournalStatus;
+  next_action: string | null;
+  next_action_date: string | null; // YYYY-MM-DD, 선택
   created_at: string;
 }
 
+export const STATUS_OPTIONS: JournalStatus[] = ["todo", "waiting", "done"];
+
 export const STATUS_LABEL: Record<JournalStatus, string> = {
-  in_progress: "진행중",
-  done: "완료",
+  todo: "내가 할 일",
+  waiting: "답변 대기",
+  done: "종료",
+};
+
+export const STATUS_BADGE_CLASS: Record<JournalStatus, string> = {
+  todo: "bg-amber-50 text-amber-700 hover:bg-amber-100",
+  waiting: "bg-violet-50 text-violet-700 hover:bg-violet-100",
+  done: "bg-green-50 text-green-700 hover:bg-green-100",
 };

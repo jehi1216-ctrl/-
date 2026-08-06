@@ -153,7 +153,7 @@ export default async function JournalPage({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-lg font-semibold">전체 업무 일지</h1>
+        <h1 className="text-lg font-semibold">전체 건축일지</h1>
         <p className="text-sm text-gray-500">
           날짜별로 모아 볼 수 있어요.
         </p>
@@ -252,7 +252,7 @@ export default async function JournalPage({
 
       {grouped.length === 0 ? (
         <p className="rounded-lg border border-dashed border-gray-300 p-6 text-center text-sm text-gray-400">
-          조건에 맞는 업무 일지가 없어요.
+          조건에 맞는 건축일지가 없어요.
         </p>
       ) : (
         <div className="space-y-8">

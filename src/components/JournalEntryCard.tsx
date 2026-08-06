@@ -6,7 +6,13 @@ import {
   updateLogStatus,
   deleteLog,
 } from "@/app/(main)/dashboard/actions";
-import { LOG_TYPE_LABEL, STATUS_LABEL, type WorkLog } from "@/types/journal";
+import {
+  LOG_TYPE_LABEL,
+  STATUS_LABEL,
+  STATUS_BADGE_CLASS,
+  STATUS_OPTIONS,
+  type WorkLog,
+} from "@/types/journal";
 import { categoryBadges } from "@/lib/categoryDisplay";
 import ProjectFiles from "./ProjectFiles";
 import EditLogForm from "./EditLogForm";
@@ -23,16 +29,18 @@ export default function JournalEntryCard({
 }) {
   const [isPending, startTransition] = useTransition();
   const [editing, setEditing] = useState(false);
-  const isDone = log.status === "done";
 
-  function toggleStatus() {
+  // 배지를 누르면 내가 할 일 → 답변 대기 → 종료 → ... 순으로 넘어간다.
+  function cycleStatus() {
+    const next =
+      STATUS_OPTIONS[(STATUS_OPTIONS.indexOf(log.status) + 1) % STATUS_OPTIONS.length];
     startTransition(async () => {
-      await updateLogStatus(log.id, isDone ? "in_progress" : "done");
+      await updateLogStatus(log.id, next);
     });
   }
 
   function handleDelete() {
-    if (!confirm("이 업무 일지를 삭제할까요?")) return;
+    if (!confirm("이 건축일지를 삭제할까요?")) return;
     startTransition(async () => {
       await deleteLog(log.id);
     });
@@ -84,6 +92,23 @@ export default function JournalEntryCard({
           <p className="whitespace-pre-wrap break-words text-sm text-gray-800">
             {log.content}
           </p>
+          {log.result && (
+            <p className="mt-1.5 whitespace-pre-wrap break-words border-l-2 border-gray-200 pl-2 text-sm text-gray-600">
+              <span className="font-medium text-gray-500">결과 </span>
+              {log.result}
+            </p>
+          )}
+          {log.status === "todo" && log.next_action && (
+            <p className="mt-1.5 whitespace-pre-wrap break-words rounded-md bg-amber-50 px-2 py-1 text-sm text-amber-800">
+              <span className="font-medium">할 일 </span>
+              {log.next_action}
+              {log.next_action_date && (
+                <span className="ml-1 text-xs text-amber-600">
+                  ({log.next_action_date})
+                </span>
+              )}
+            </p>
+          )}
           <ProjectFiles
             projectId={log.project_id}
             workLogId={log.id}
@@ -94,13 +119,10 @@ export default function JournalEntryCard({
 
         <div className="flex flex-shrink-0 flex-col items-end gap-2">
           <button
-            onClick={toggleStatus}
+            onClick={cycleStatus}
             disabled={isPending}
-            className={`rounded-full px-2.5 py-1 text-xs font-medium ${
-              isDone
-                ? "bg-green-50 text-green-700 hover:bg-green-100"
-                : "bg-amber-50 text-amber-700 hover:bg-amber-100"
-            }`}
+            title="눌러서 상태 변경"
+            className={`whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium ${STATUS_BADGE_CLASS[log.status]}`}
           >
             {STATUS_LABEL[log.status]}
           </button>

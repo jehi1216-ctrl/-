@@ -84,8 +84,11 @@ export async function createLog(
 
   const project_id = String(formData.get("project_id") ?? "").trim();
   const content = String(formData.get("content") ?? "").trim();
+  const result = String(formData.get("result") ?? "").trim();
   const categories = formData.getAll("categories").map((c) => String(c));
-  const status = String(formData.get("status") ?? "in_progress") as JournalStatus;
+  const status = String(formData.get("status") ?? "todo") as JournalStatus;
+  const next_action = String(formData.get("next_action") ?? "").trim();
+  const next_action_date = String(formData.get("next_action_date") ?? "").trim();
   const date = String(formData.get("date") ?? todayKST());
   const log_type = String(formData.get("log_type") ?? "design") as LogType;
 
@@ -113,9 +116,12 @@ export async function createLog(
     date,
     log_type,
     content,
+    result: result || null,
     categories,
     category_details: parsed.details,
     status,
+    next_action: status === "todo" ? next_action || null : null,
+    next_action_date: status === "todo" ? next_action_date || null : null,
   });
 
   if (error) {
@@ -124,6 +130,7 @@ export async function createLog(
 
   revalidatePath("/dashboard");
   revalidatePath("/journal");
+  revalidatePath("/calendar");
   revalidatePath(`/projects/${project_id}`);
   return { error: null, success: true, submittedAt: Date.now() };
 }
@@ -146,8 +153,11 @@ export async function updateLog(
   }
 
   const content = String(formData.get("content") ?? "").trim();
+  const result = String(formData.get("result") ?? "").trim();
   const categories = formData.getAll("categories").map((c) => String(c));
-  const status = String(formData.get("status") ?? "in_progress") as JournalStatus;
+  const status = String(formData.get("status") ?? "todo") as JournalStatus;
+  const next_action = String(formData.get("next_action") ?? "").trim();
+  const next_action_date = String(formData.get("next_action_date") ?? "").trim();
 
   if (!content) {
     return { error: "내용을 입력해주세요.", success: false };
@@ -177,9 +187,12 @@ export async function updateLog(
     .from("work_logs")
     .update({
       content,
+      result: result || null,
       categories,
       category_details: parsed.details,
       status,
+      next_action: status === "todo" ? next_action || null : null,
+      next_action_date: status === "todo" ? next_action_date || null : null,
     })
     .eq("id", id);
 
@@ -189,6 +202,7 @@ export async function updateLog(
 
   revalidatePath("/dashboard");
   revalidatePath("/journal");
+  revalidatePath("/calendar");
   revalidatePath(`/projects/${existing.project_id}`);
   return { error: null, success: true, submittedAt: Date.now() };
 }
@@ -203,6 +217,7 @@ export async function updateLogStatus(id: string, status: JournalStatus) {
     .single();
   revalidatePath("/dashboard");
   revalidatePath("/journal");
+  revalidatePath("/calendar");
   if (data?.project_id) revalidatePath(`/projects/${data.project_id}`);
 }
 
@@ -216,5 +231,6 @@ export async function deleteLog(id: string) {
     .single();
   revalidatePath("/dashboard");
   revalidatePath("/journal");
+  revalidatePath("/calendar");
   if (data?.project_id) revalidatePath(`/projects/${data.project_id}`);
 }

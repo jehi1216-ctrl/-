@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "업무 일지",
-  description: "개인 업무 일지 웹앱",
+  title: "ArchiLog — 나의 건축일지",
+  description: "나의 건축일지",
 };
 
 export default function RootLayout({

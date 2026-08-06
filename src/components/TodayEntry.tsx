@@ -43,8 +43,7 @@ export default function TodayEntry({
         </button>
         <JournalForm
           date={date}
-          projects={[selected]}
-          defaultProjectId={selected.id}
+          projectId={selected.id}
           checklistsByProject={checklistsByProject}
           contactsByProject={contactsByProject}
           lockedLogType={tab}

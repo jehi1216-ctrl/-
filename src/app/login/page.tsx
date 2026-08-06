@@ -13,15 +13,16 @@ export default async function LoginPage({
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center">
           <span className="text-sm font-semibold tracking-tight text-brand-800">
-            업무일지
+            ArchiLog
           </span>
+          <p className="mt-1 text-xs text-gray-400">나의 건축일지</p>
         </div>
 
         <div className="space-y-6 rounded-2xl border border-gray-100 bg-white p-8 shadow-lg shadow-slate-200/60">
           <div>
             <h1 className="text-xl font-semibold">로그인</h1>
             <p className="mt-1 text-sm text-gray-500">
-              업무 일지에 로그인하세요.
+              ArchiLog에 로그인하세요.
             </p>
           </div>
 

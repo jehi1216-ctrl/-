@@ -7,11 +7,12 @@ import {
   initialFormState,
   type FormState,
 } from "@/app/(main)/dashboard/formState";
-import type { Project, ChecklistItem, ProjectContact } from "@/types/project";
+import type { ChecklistItem, ProjectContact } from "@/types/project";
 import { LOG_TYPE_LABEL, type LogType } from "@/types/journal";
 import ProjectChecklist from "./ProjectChecklist";
 import CategoryFieldset from "./CategoryFieldset";
 import BuildCategoryFieldset from "./BuildCategoryFieldset";
+import StatusFieldset from "./StatusFieldset";
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -28,16 +29,14 @@ function SubmitButton() {
 
 export default function JournalForm({
   date,
-  projects,
-  defaultProjectId,
+  projectId,
   checklistsByProject = {},
   contactsByProject = {},
   showChecklist = true,
   lockedLogType,
 }: {
   date: string;
-  projects: Project[];
-  defaultProjectId?: string;
+  projectId: string;
   checklistsByProject?: Record<string, ChecklistItem[]>;
   contactsByProject?: Record<string, ProjectContact[]>;
   showChecklist?: boolean;
@@ -48,7 +47,6 @@ export default function JournalForm({
     initialFormState
   );
   const formRef = useRef<HTMLFormElement>(null);
-  const [projectId, setProjectId] = useState(defaultProjectId ?? "");
   const [logType, setLogType] = useState<LogType>(lockedLogType ?? "design");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [checklistOpen, setChecklistOpen] = useState(false);
@@ -84,6 +82,7 @@ export default function JournalForm({
     >
       <input type="hidden" name="date" value={date} />
       <input type="hidden" name="log_type" value={logType} />
+      <input type="hidden" name="project_id" value={projectId} />
 
       {state.error && (
         <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">
@@ -110,32 +109,15 @@ export default function JournalForm({
         </div>
       )}
 
-      <div>
-        <label htmlFor="project_id" className="mb-1 block text-sm font-medium">
-          프로젝트(현장)
-        </label>
-        <select
-          id="project_id"
-          name="project_id"
-          required
-          value={projectId}
-          onChange={(e) => setProjectId(e.target.value)}
-          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
-        >
-          <option value="" disabled>
-            프로젝트를 선택하세요
-          </option>
-          {projects.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-            </option>
-          ))}
-        </select>
-      </div>
+      {logType === "design" ? (
+        <CategoryFieldset selectedCategories={selectedCategories} onToggle={toggleCategory} />
+      ) : (
+        <BuildCategoryFieldset selectedCategories={selectedCategories} onToggle={toggleCategory} />
+      )}
 
       <div>
         <label htmlFor="content" className="mb-1 block text-sm font-medium">
-          업무 내용
+          기록 <span className="text-gray-400">— 무엇을 했는지</span>
         </label>
         <textarea
           id="content"
@@ -173,26 +155,20 @@ export default function JournalForm({
         )}
       </div>
 
-      {logType === "design" ? (
-        <CategoryFieldset selectedCategories={selectedCategories} onToggle={toggleCategory} />
-      ) : (
-        <BuildCategoryFieldset selectedCategories={selectedCategories} onToggle={toggleCategory} />
-      )}
-
       <div>
-        <label htmlFor="status" className="mb-1 block text-sm font-medium">
-          상태
+        <label htmlFor="result" className="mb-1 block text-sm font-medium">
+          결과 <span className="text-gray-400">— 선택</span>
         </label>
-        <select
-          id="status"
-          name="status"
-          defaultValue="in_progress"
-          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 sm:w-48"
-        >
-          <option value="in_progress">진행중</option>
-          <option value="done">완료</option>
-        </select>
+        <textarea
+          id="result"
+          name="result"
+          rows={2}
+          placeholder="어떻게 마무리됐는지 적어주세요"
+          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+        />
       </div>
+
+      <StatusFieldset key={state.submittedAt} />
 
       <SubmitButton />
     </form>

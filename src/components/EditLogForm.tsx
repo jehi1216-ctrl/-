@@ -7,6 +7,7 @@ import { initialFormState, type FormState } from "@/app/(main)/dashboard/formSta
 import type { WorkLog } from "@/types/journal";
 import CategoryFieldset from "./CategoryFieldset";
 import BuildCategoryFieldset from "./BuildCategoryFieldset";
+import StatusFieldset from "./StatusFieldset";
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -60,14 +61,6 @@ export default function EditLogForm({
         </p>
       )}
 
-      <textarea
-        name="content"
-        required
-        rows={3}
-        defaultValue={log.content}
-        className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
-      />
-
       {log.log_type === "build" ? (
         <BuildCategoryFieldset
           selectedCategories={selectedCategories}
@@ -82,16 +75,38 @@ export default function EditLogForm({
       )}
 
       <div>
-        <label className="mb-1 block text-sm font-medium">상태</label>
-        <select
-          name="status"
-          defaultValue={log.status}
-          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 sm:w-48"
-        >
-          <option value="in_progress">진행중</option>
-          <option value="done">완료</option>
-        </select>
+        <label htmlFor={`content-${log.id}`} className="mb-1 block text-sm font-medium">
+          기록 <span className="text-gray-400">— 무엇을 했는지</span>
+        </label>
+        <textarea
+          id={`content-${log.id}`}
+          name="content"
+          required
+          rows={3}
+          defaultValue={log.content}
+          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+        />
       </div>
+
+      <div>
+        <label htmlFor={`result-${log.id}`} className="mb-1 block text-sm font-medium">
+          결과 <span className="text-gray-400">— 선택</span>
+        </label>
+        <textarea
+          id={`result-${log.id}`}
+          name="result"
+          rows={2}
+          defaultValue={log.result ?? ""}
+          placeholder="어떻게 마무리됐는지 적어주세요"
+          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+        />
+      </div>
+
+      <StatusFieldset
+        defaultStatus={log.status}
+        defaultNextAction={log.next_action ?? ""}
+        defaultNextActionDate={log.next_action_date ?? ""}
+      />
 
       <div className="flex items-center gap-3">
         <SubmitButton />

@@ -13,8 +13,9 @@ export default async function SignupPage({
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center">
           <span className="text-sm font-semibold tracking-tight text-brand-800">
-            업무일지
+            ArchiLog
           </span>
+          <p className="mt-1 text-xs text-gray-400">나의 건축일지</p>
         </div>
 
         <div className="space-y-6 rounded-2xl border border-gray-100 bg-white p-8 shadow-lg shadow-slate-200/60">

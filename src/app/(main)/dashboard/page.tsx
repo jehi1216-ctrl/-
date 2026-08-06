@@ -112,7 +112,7 @@ export default async function DashboardPage() {
         </h2>
         {todayLogs.length === 0 ? (
           <p className="rounded-lg border border-dashed border-gray-300 p-6 text-center text-sm text-gray-400">
-            아직 작성한 업무 일지가 없어요.
+            아직 작성한 건축일지가 없어요.
           </p>
         ) : (
           <ul className="space-y-3">

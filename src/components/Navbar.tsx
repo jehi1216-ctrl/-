@@ -6,7 +6,7 @@ import LogoutButton from "./LogoutButton";
 
 const NAV_ITEMS = [
   { href: "/projects", label: "현장" },
-  { href: "/dashboard", label: "오늘 입력" },
+  { href: "/dashboard", label: "오늘 기록" },
   { href: "/journal", label: "전체 목록" },
   { href: "/calendar", label: "캘린더" },
   { href: "/checklist", label: "체크리스트" },
@@ -20,7 +20,7 @@ export default function Navbar({ email }: { email?: string | null }) {
       <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-y-2 px-4 py-3 sm:px-6">
         <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
           <span className="text-sm font-semibold tracking-tight text-brand-800">
-            업무일지
+            ArchiLog
           </span>
           <nav className="flex items-center gap-1 sm:gap-2">
             {NAV_ITEMS.map((item) => {
