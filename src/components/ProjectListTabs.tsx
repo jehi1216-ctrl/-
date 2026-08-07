@@ -6,14 +6,52 @@ import {
   PHASE_LABEL,
   PHASE_BADGE_CLASS,
   PHASES_BY_TYPE,
+  CHECKLIST_STATUS_OPTIONS,
   CHECKLIST_STATUS_BADGE_CLASS,
+  NO_GROUP_LABEL,
   buildingCoverageRatio,
   floorAreaRatio,
   formatArea,
   formatRatio,
   type Project,
+  type ChecklistGroup,
   type ChecklistItem,
+  type ChecklistStatus,
 } from "@/types/project";
+
+// 미완료 항목을 폴더별로 묶는다. 항목이 하나도 안 남은 폴더는 아예 넣지 않는다.
+// 폴더가 지워진 항목(group_id가 남아 있어도 폴더 목록에 없는 경우)은 '폴더 없음'으로 본다.
+function folderSummary(items: ChecklistItem[], groups: ChecklistGroup[]) {
+  const knownIds = new Set(groups.map((g) => g.id));
+  const byGroup = new Map<string, ChecklistItem[]>();
+  for (const item of items) {
+    const key = item.group_id && knownIds.has(item.group_id) ? item.group_id : "";
+    const bucket = byGroup.get(key) ?? [];
+    bucket.push(item);
+    byGroup.set(key, bucket);
+  }
+
+  const rows: { key: string; name: string; items: ChecklistItem[] }[] = [];
+  for (const g of groups) {
+    const bucket = byGroup.get(g.id);
+    if (bucket?.length) rows.push({ key: g.id, name: g.name, items: bucket });
+  }
+  const ungrouped = byGroup.get("");
+  if (ungrouped?.length) {
+    rows.push({ key: "", name: NO_GROUP_LABEL, items: ungrouped });
+  }
+  return rows;
+}
+
+function statusCounts(items: ChecklistItem[]) {
+  const counts = new Map<ChecklistStatus, number>();
+  for (const item of items) {
+    counts.set(item.status, (counts.get(item.status) ?? 0) + 1);
+  }
+  return CHECKLIST_STATUS_OPTIONS.filter((s) => s !== "완료")
+    .map((s) => ({ status: s, count: counts.get(s) ?? 0 }))
+    .filter((c) => c.count > 0);
+}
 
 function areaSummary(p: Project): string | null {
   const parts: string[] = [];
@@ -31,9 +69,11 @@ import { LOG_TYPE_LABEL, type LogType } from "@/types/journal";
 export default function ProjectListTabs({
   projects,
   checklistsByProject = {},
+  groupsByProject = {},
 }: {
   projects: Project[];
   checklistsByProject?: Record<string, ChecklistItem[]>;
+  groupsByProject?: Record<string, ChecklistGroup[]>;
 }) {
   const [tab, setTab] = useState<LogType>("design");
   const filtered = projects.filter((p) => PHASES_BY_TYPE[tab].includes(p.phase));
@@ -65,6 +105,8 @@ export default function ProjectListTabs({
         <ul className="space-y-3">
           {filtered.map((p) => {
             const area = areaSummary(p);
+            const openItems = checklistsByProject[p.id] ?? [];
+            const folders = folderSummary(openItems, groupsByProject[p.id] ?? []);
             return (
               <li key={p.id}>
                 <Link
@@ -85,16 +127,29 @@ export default function ProjectListTabs({
                     </p>
                   )}
                   {area && <p className="mt-1 text-xs text-gray-400">{area}</p>}
-                  {(checklistsByProject[p.id] ?? []).length > 0 && (
+                  {folders.length > 0 && (
                     <ul className="mt-2 space-y-1 border-t border-gray-100 pt-2">
-                      {(checklistsByProject[p.id] ?? []).map((item) => (
-                        <li key={item.id} className="flex items-center gap-1.5 text-xs">
-                          <span
-                            className={`flex-shrink-0 rounded-full px-1.5 py-0.5 font-medium ${CHECKLIST_STATUS_BADGE_CLASS[item.status]}`}
-                          >
-                            {item.status}
+                      {folders.map((folder) => (
+                        <li
+                          key={folder.key}
+                          className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-xs"
+                        >
+                          <span className="min-w-0 truncate text-gray-600">
+                            {folder.key ? `📁 ${folder.name}` : folder.name}
+                            <span className="ml-1.5 text-gray-400">
+                              {folder.items.length}
+                            </span>
                           </span>
-                          <span className="truncate text-gray-600">{item.content}</span>
+                          <span className="flex flex-shrink-0 flex-wrap gap-1">
+                            {statusCounts(folder.items).map(({ status, count }) => (
+                              <span
+                                key={status}
+                                className={`rounded-full px-1.5 py-0.5 font-medium ${CHECKLIST_STATUS_BADGE_CLASS[status]}`}
+                              >
+                                {status} {count}
+                              </span>
+                            ))}
+                          </span>
                         </li>
                       ))}
                     </ul>

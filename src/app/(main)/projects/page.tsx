@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import type { Project, ChecklistItem } from "@/types/project";
+import type { Project, ChecklistGroup, ChecklistItem } from "@/types/project";
 import ProjectListTabs from "@/components/ProjectListTabs";
 
 export default async function ProjectsPage() {
@@ -30,6 +30,20 @@ export default async function ProjectsPage() {
     checklistsByProject.set(item.project_id, bucket);
   }
 
+  // 카드에는 폴더 이름과 건수만 요약해 보여주므로 폴더 목록도 함께 가져온다.
+  const { data: groupRows } = await supabase
+    .from("project_checklist_groups")
+    .select("*")
+    .eq("user_id", user!.id)
+    .order("created_at", { ascending: true });
+
+  const groupsByProject = new Map<string, ChecklistGroup[]>();
+  for (const g of (groupRows ?? []) as ChecklistGroup[]) {
+    const bucket = groupsByProject.get(g.project_id) ?? [];
+    bucket.push(g);
+    groupsByProject.set(g.project_id, bucket);
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-3">
@@ -53,6 +67,7 @@ export default async function ProjectsPage() {
         <ProjectListTabs
           projects={list}
           checklistsByProject={Object.fromEntries(checklistsByProject)}
+          groupsByProject={Object.fromEntries(groupsByProject)}
         />
       )}
     </div>
