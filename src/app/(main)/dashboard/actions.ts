@@ -211,6 +211,29 @@ export async function updateLog(
   return { error: null, success: true, submittedAt: Date.now() };
 }
 
+// 캘린더에서 할 일 문구와 날짜만 바로 고칠 때 쓴다(일지 전체 수정 폼을 열지 않는다).
+// 날짜를 비우면 캘린더에서는 사라지고 모아보기에만 남는다.
+export async function updateNextAction(
+  id: string,
+  nextAction: string,
+  nextActionDate: string
+) {
+  const trimmed = nextAction.trim();
+  if (!trimmed) return;
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("work_logs")
+    .update({ next_action: trimmed, next_action_date: nextActionDate || null })
+    .eq("id", id)
+    .select("project_id")
+    .single();
+  revalidatePath("/dashboard");
+  revalidatePath("/journal");
+  revalidatePath("/calendar");
+  if (data?.project_id) revalidatePath(`/projects/${data.project_id}`);
+}
+
 // 종료 전용. 결정사항을 비워서 부르면 '그냥 종료'이고, 이때 기존 결정사항은
 // 지우지 않는다(상태를 되돌렸다가 다시 종료해도 적어둔 내용이 살아남는다).
 export async function closeLog(id: string, decision: string) {

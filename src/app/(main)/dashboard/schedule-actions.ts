@@ -32,6 +32,20 @@ export async function toggleScheduleItem(id: string, isDone: boolean) {
   revalidatePath("/calendar");
 }
 
+// 캘린더에서 일정 내용/날짜를 바로 고칠 때 쓴다. 날짜를 바꾸면 그 날짜 칸으로 옮겨간다.
+export async function updateScheduleItem(id: string, content: string, date: string) {
+  const trimmed = content.trim();
+  if (!trimmed || !date) return;
+
+  const supabase = await createClient();
+  await supabase
+    .from("schedule_items")
+    .update({ content: trimmed, date })
+    .eq("id", id);
+  revalidatePath("/dashboard");
+  revalidatePath("/calendar");
+}
+
 export async function deleteScheduleItem(id: string) {
   const supabase = await createClient();
   await supabase.from("schedule_items").delete().eq("id", id);

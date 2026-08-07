@@ -2,7 +2,8 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { currentMonthKST, shiftMonth, buildMonthGrid, todayKST } from "@/lib/date";
 import { projectColorClass } from "@/lib/projectColor";
-import CalendarGrid, { type CalendarEntry } from "@/components/CalendarGrid";
+import CalendarGrid from "@/components/CalendarGrid";
+import type { CalendarEntry } from "@/types/calendar";
 import type { ScheduleItem } from "@/types/schedule";
 import type { WorkLog } from "@/types/journal";
 import type { Project } from "@/types/project";
@@ -91,7 +92,9 @@ export default async function CalendarPage({
           <h1 className="text-lg font-semibold">
             {y}년 {m}월
           </h1>
-          <p className="text-sm text-gray-500">날짜를 누르면 그날 내용을 볼 수 있어요.</p>
+          <p className="text-sm text-gray-500">
+            날짜를 누르면 그날 내용을 보고 바로 고칠 수 있어요.
+          </p>
         </div>
         <div className="flex items-center gap-1">
           <Link

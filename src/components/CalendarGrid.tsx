@@ -1,25 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import { formatDateLabel, type CalendarCell } from "@/lib/date";
+import type { CalendarCell } from "@/lib/date";
 import { projectColorClass, projectBarClass } from "@/lib/projectColor";
+import type { CalendarEntry } from "@/types/calendar";
+import CalendarDayPanel from "./CalendarDayPanel";
 
 const WEEKDAY_LABELS = ["일", "월", "화", "수", "목", "금", "토"];
 const MAX_CHIPS = 3;
-
-// 캘린더 한 칸에 들어가는 항목. 일정(schedule_items)과 일지의 '내가 할 일'을 함께 보여준다.
-export type CalendarEntry =
-  | { kind: "schedule"; id: string; label: string; done: boolean }
-  | {
-      kind: "todo";
-      id: string;
-      label: string;
-      projectId: string;
-      projectName: string;
-      content: string;
-      logDate: string;
-    };
 
 export default function CalendarGrid({
   weeks,
@@ -30,9 +18,9 @@ export default function CalendarGrid({
   entriesByDate: Record<string, CalendarEntry[]>;
   today: string;
 }) {
-  // 칸이 좁아 내용이 잘리므로, 날짜를 누르면 아래에 그날 항목을 전문으로 펼친다.
+  // 칸이 좁아 내용이 잘리므로, 날짜를 누르면 아래에 그날 항목을 전문으로 펼치고
+  // 거기서 바로 고칠 수 있게 한다.
   const [selected, setSelected] = useState<string | null>(null);
-  const selectedEntries = selected ? (entriesByDate[selected] ?? []) : [];
 
   return (
     <div className="space-y-4">
@@ -114,73 +102,12 @@ export default function CalendarGrid({
       </div>
 
       {selected && (
-        <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
-          <div className="mb-3 flex items-center justify-between gap-2">
-            <h2 className="text-sm font-medium text-gray-700">
-              {formatDateLabel(selected)}
-              <span className="ml-2 text-xs font-normal text-gray-400">
-                {selectedEntries.length}건
-              </span>
-            </h2>
-            <button
-              type="button"
-              onClick={() => setSelected(null)}
-              className="text-xs text-gray-400 hover:text-gray-600"
-            >
-              닫기
-            </button>
-          </div>
-
-          {selectedEntries.length === 0 ? (
-            <p className="text-sm text-gray-400">이 날에는 등록된 항목이 없어요.</p>
-          ) : (
-            <ul className="space-y-2">
-              {selectedEntries.map((item) =>
-                item.kind === "todo" ? (
-                  <li
-                    key={item.id}
-                    className={`rounded-md border border-gray-100 border-l-4 p-2.5 ${projectBarClass(
-                      item.projectId
-                    )}`}
-                  >
-                    <div className="mb-1 flex flex-wrap items-center gap-1.5">
-                      <Link
-                        href={`/projects/${item.projectId}`}
-                        className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${projectColorClass(
-                          item.projectId
-                        )}`}
-                      >
-                        {item.projectName}
-                      </Link>
-                      <span className="text-[11px] text-gray-400">
-                        {item.logDate} 작성
-                      </span>
-                    </div>
-                    <p className="whitespace-pre-wrap break-words text-sm font-medium text-gray-900">
-                      {item.label}
-                    </p>
-                    <p className="mt-1 whitespace-pre-wrap break-words border-l-2 border-gray-200 pl-2 text-xs text-gray-500">
-                      {item.content}
-                    </p>
-                  </li>
-                ) : (
-                  <li
-                    key={item.id}
-                    className="rounded-md border border-gray-100 border-l-4 border-l-gray-300 p-2.5"
-                  >
-                    <p
-                      className={`whitespace-pre-wrap break-words text-sm ${
-                        item.done ? "text-gray-400 line-through" : "text-gray-800"
-                      }`}
-                    >
-                      {item.label}
-                    </p>
-                  </li>
-                )
-              )}
-            </ul>
-          )}
-        </div>
+        <CalendarDayPanel
+          key={selected}
+          date={selected}
+          entries={entriesByDate[selected] ?? []}
+          onClose={() => setSelected(null)}
+        />
       )}
     </div>
   );
