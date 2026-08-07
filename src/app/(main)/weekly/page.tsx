@@ -14,26 +14,34 @@ import {
 import { projectColorClass, projectBarClass } from "@/lib/projectColor";
 import type { WorkLog } from "@/types/journal";
 import type { Project } from "@/types/project";
+import type { ScheduleItem } from "@/types/schedule";
 
-// 할 일이 이번 주 화면의 어느 묶음에 들어가는지.
-type Bucket = "overdue" | "week" | "undated";
+// 한 주 화면의 묶음. 날짜 없는 묶음(답변 대기/날짜 없음)과 밀린 것은
+// 이번 주를 볼 때만 넣는다 — 다른 주에서는 매번 같은 더미가 따라와 의미가 없다.
+type Bucket = "overdue" | "week" | "waiting" | "undated";
 
-const BUCKET_ORDER: Bucket[] = ["overdue", "week", "undated"];
+const BUCKET_ORDER: Bucket[] = ["overdue", "week", "waiting", "undated"];
 
 const BUCKET_LABEL: Record<Bucket, string> = {
   overdue: "밀린 것",
   week: "이번 주",
+  waiting: "답변 대기",
   undated: "날짜 없음",
 };
 
+const NO_PROJECT_KEY = "";
+
 interface WeeklyItem {
-  log: WorkLog;
+  id: string;
   bucket: Bucket;
   label: string;
+  date: string | null;
+  isSchedule: boolean;
+  hint?: string; // 마우스를 올렸을 때 보여줄 원본 기록 본문
 }
 
 interface ProjectGroup {
-  id: string;
+  id: string; // 빈 문자열이면 프로젝트 없는 일정 묶음
   name: string;
   items: WeeklyItem[];
   overdueCount: number;
@@ -60,14 +68,25 @@ export default async function WeeklyPage({
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [{ data: logs }, { data: projects }] = await Promise.all([
-    supabase
-      .from("work_logs")
-      .select("*")
-      .eq("user_id", user!.id)
-      .eq("status", "todo"),
-    supabase.from("projects").select("id, name").eq("user_id", user!.id),
-  ]);
+  let scheduleQuery = supabase
+    .from("schedule_items")
+    .select("*")
+    .eq("user_id", user!.id)
+    .eq("is_done", false)
+    .lte("date", weekEnd);
+  // 이번 주가 아니면 지나간 일정을 끌어오지 않으므로 범위를 좁혀 받는다.
+  if (!isCurrentWeek) scheduleQuery = scheduleQuery.gte("date", weekStart);
+
+  const [{ data: logs }, { data: scheduleItems }, { data: projects }] =
+    await Promise.all([
+      supabase
+        .from("work_logs")
+        .select("*")
+        .eq("user_id", user!.id)
+        .in("status", ["todo", "waiting"]),
+      scheduleQuery,
+      supabase.from("projects").select("id, name").eq("user_id", user!.id),
+    ]);
 
   const projectNames = new Map(
     ((projects ?? []) as Pick<Project, "id" | "name">[]).map((p) => [p.id, p.name])
@@ -75,43 +94,75 @@ export default async function WeeklyPage({
 
   const groups = new Map<string, ProjectGroup>();
 
-  for (const log of (logs ?? []) as WorkLog[]) {
-    // 배지를 눌러 '내가 할 일'로 바꾼 일지는 next_action이 비어 있다.
-    // 미처리 모아보기와 똑같이 기록 본문으로 대신 보여준다.
-    const label = log.next_action || log.content;
-
-    const due = log.next_action_date;
-    let bucket: Bucket;
-    if (!due) {
-      bucket = "undated";
-    } else if (due < weekStart) {
-      // 지나간 마감은 이번 주를 볼 때만 끌어온다. 미래 주에서는 과거 전부가
-      // 딸려와 화면이 무의미해진다.
-      if (!isCurrentWeek) continue;
-      bucket = "overdue";
-    } else if (due <= weekEnd) {
-      bucket = "week";
-    } else {
-      continue; // 다음 주 이후
-    }
-
-    const group = groups.get(log.project_id) ?? {
-      id: log.project_id,
-      name: projectNames.get(log.project_id) ?? "알 수 없는 프로젝트",
+  function add(projectId: string | null, item: WeeklyItem) {
+    const key = projectId ?? NO_PROJECT_KEY;
+    const group = groups.get(key) ?? {
+      id: key,
+      name: key
+        ? (projectNames.get(key) ?? "알 수 없는 프로젝트")
+        : "프로젝트 없는 일정",
       items: [],
       overdueCount: 0,
       earliestDate: null,
     };
-    group.items.push({ log, bucket, label });
-    if (bucket === "overdue") group.overdueCount += 1;
-    if (due && (group.earliestDate === null || due < group.earliestDate)) {
-      group.earliestDate = due;
+    group.items.push(item);
+    if (item.bucket === "overdue") group.overdueCount += 1;
+    if (item.date && (group.earliestDate === null || item.date < group.earliestDate)) {
+      group.earliestDate = item.date;
     }
-    groups.set(log.project_id, group);
+    groups.set(key, group);
+  }
+
+  // 날짜가 붙은 항목이 어느 묶음인지. 이 주와 무관하면 null을 돌려 걸러낸다.
+  function datedBucket(date: string): Bucket | null {
+    if (date < weekStart) return isCurrentWeek ? "overdue" : null;
+    if (date <= weekEnd) return "week";
+    return null; // 다음 주 이후
+  }
+
+  for (const log of (logs ?? []) as WorkLog[]) {
+    // 배지를 눌러 상태만 바꾼 일지는 next_action이 비어 있다.
+    // 미처리 모아보기와 똑같이 기록 본문으로 대신 보여준다.
+    const label = (log.status === "todo" && log.next_action) || log.content;
+
+    let bucket: Bucket | null;
+    if (log.status === "waiting") {
+      // 답변 대기에는 날짜 개념이 없다.
+      bucket = isCurrentWeek ? "waiting" : null;
+    } else if (!log.next_action_date) {
+      bucket = isCurrentWeek ? "undated" : null;
+    } else {
+      bucket = datedBucket(log.next_action_date);
+    }
+    if (!bucket) continue;
+
+    add(log.project_id, {
+      id: log.id,
+      bucket,
+      label,
+      date: bucket === "waiting" ? null : log.next_action_date,
+      isSchedule: false,
+      hint: log.content,
+    });
+  }
+
+  for (const item of (scheduleItems ?? []) as ScheduleItem[]) {
+    const bucket = datedBucket(item.date);
+    if (!bucket) continue;
+
+    add(item.project_id, {
+      id: item.id,
+      bucket,
+      label: item.content,
+      date: item.date,
+      isSchedule: true,
+    });
   }
 
   // 급한 프로젝트가 위로: 밀린 게 있는 곳 → 마감이 이른 곳 → 이름 순.
+  // 프로젝트 없는 일정은 항상 맨 아래.
   const groupList = [...groups.values()].sort((a, b) => {
+    if (!a.id !== !b.id) return a.id ? -1 : 1;
     if ((a.overdueCount > 0) !== (b.overdueCount > 0)) return a.overdueCount > 0 ? -1 : 1;
     if (a.earliestDate && b.earliestDate && a.earliestDate !== b.earliestDate) {
       return a.earliestDate < b.earliestDate ? -1 : 1;
@@ -124,8 +175,8 @@ export default async function WeeklyPage({
     group.items.sort((a, b) => {
       const order = BUCKET_ORDER.indexOf(a.bucket) - BUCKET_ORDER.indexOf(b.bucket);
       if (order !== 0) return order;
-      const ad = a.log.next_action_date ?? "";
-      const bd = b.log.next_action_date ?? "";
+      const ad = a.date ?? "";
+      const bd = b.date ?? "";
       return ad < bd ? -1 : ad > bd ? 1 : 0;
     });
   }
@@ -140,10 +191,10 @@ export default async function WeeklyPage({
           <h1 className="text-lg font-semibold">{formatWeekRange(weekStart)}</h1>
           <p className="text-sm text-gray-500">
             {totalCount === 0 ? (
-              "일지에 남긴 할 일을 프로젝트별로 모아 봅니다."
+              "일지의 할 일·답변 대기와 일정을 프로젝트별로 모아 봅니다."
             ) : (
               <>
-                할 일 {totalCount}건
+                {totalCount}건
                 {overdueTotal > 0 && (
                   <span className="font-medium text-red-600"> · 밀린 것 {overdueTotal}건</span>
                 )}
@@ -175,46 +226,50 @@ export default async function WeeklyPage({
 
       {groupList.length === 0 ? (
         <p className="rounded-lg border border-dashed border-gray-300 p-6 text-center text-sm text-gray-400">
-          이번 주에 잡힌 할 일이 없어요.
+          이번 주에 잡힌 일이 없어요.
         </p>
       ) : (
         <div className="space-y-4">
           {groupList.map((group) => (
             <section
-              key={group.id}
-              className={`rounded-xl border border-gray-200 border-l-4 bg-white p-4 shadow-sm sm:p-6 ${projectBarClass(
-                group.id
-              )}`}
+              key={group.id || "none"}
+              className={`rounded-xl border border-gray-200 border-l-4 bg-white p-4 shadow-sm sm:p-6 ${
+                group.id ? projectBarClass(group.id) : "border-l-gray-300"
+              }`}
             >
               <div className="mb-3 flex flex-wrap items-center gap-2">
-                <Link
-                  href={`/projects/${group.id}`}
-                  className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${projectColorClass(
-                    group.id
-                  )}`}
-                >
-                  {group.name}
-                </Link>
+                {group.id ? (
+                  <Link
+                    href={`/projects/${group.id}`}
+                    className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${projectColorClass(
+                      group.id
+                    )}`}
+                  >
+                    {group.name}
+                  </Link>
+                ) : (
+                  <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-500">
+                    {group.name}
+                  </span>
+                )}
                 <span className="text-xs text-gray-400">{group.items.length}건</span>
               </div>
 
               <ul className="space-y-2">
-                {group.items.map(({ log, bucket, label }, index, all) => {
-                  const badge = log.next_action_date
-                    ? dueBadge(log.next_action_date, today)
-                    : null;
+                {group.items.map((item, index, all) => {
+                  const badge = item.date ? dueBadge(item.date, today) : null;
                   // 묶음이 바뀌는 첫 줄에만 라벨을 붙여 목록을 짧게 유지한다.
-                  const showLabel = index === 0 || all[index - 1].bucket !== bucket;
+                  const showLabel = index === 0 || all[index - 1].bucket !== item.bucket;
 
                   return (
-                    <li key={log.id}>
+                    <li key={`${item.isSchedule ? "s" : "l"}-${item.id}`}>
                       {showLabel && (
                         <p
                           className={`mb-1 text-xs font-medium text-gray-400 ${
                             index === 0 ? "" : "mt-3"
                           }`}
                         >
-                          {BUCKET_LABEL[bucket]}
+                          {BUCKET_LABEL[item.bucket]}
                         </p>
                       )}
                       <div className="flex items-start gap-2">
@@ -223,17 +278,21 @@ export default async function WeeklyPage({
                             badge?.className ?? "bg-gray-100 text-gray-400"
                           }`}
                         >
-                          {!log.next_action_date
+                          {!item.date
                             ? "미정"
-                            : bucket === "overdue"
+                            : item.bucket === "overdue"
                               ? badge!.label
-                              : `${weekdayOf(log.next_action_date)} ${formatShortDate(log.next_action_date)}`}
+                              : `${weekdayOf(item.date)} ${formatShortDate(item.date)}`}
                         </span>
-                        <span
-                          className="min-w-0 break-words text-sm text-gray-800"
-                          title={log.content}
-                        >
-                          {label}
+                        <span className="min-w-0 break-words text-sm text-gray-800">
+                          {item.isSchedule && (
+                            <span className="mr-1.5 rounded bg-gray-100 px-1.5 py-0.5 align-middle text-[11px] font-medium text-gray-500">
+                              일정
+                            </span>
+                          )}
+                          <span className="align-middle" title={item.hint}>
+                            {item.label}
+                          </span>
                         </span>
                       </div>
                     </li>

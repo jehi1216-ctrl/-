@@ -25,6 +25,7 @@ export async function addScheduleItem(formData: FormData) {
 
   revalidatePath("/dashboard");
   revalidatePath("/calendar");
+  revalidatePath("/weekly");
 }
 
 export async function toggleScheduleItem(id: string, isDone: boolean) {
@@ -32,6 +33,7 @@ export async function toggleScheduleItem(id: string, isDone: boolean) {
   await supabase.from("schedule_items").update({ is_done: isDone }).eq("id", id);
   revalidatePath("/dashboard");
   revalidatePath("/calendar");
+  revalidatePath("/weekly");
 }
 
 // 캘린더에서 일정 내용/날짜/현장을 바로 고칠 때 쓴다. 날짜를 바꾸면 그 날짜 칸으로 옮겨간다.
@@ -51,6 +53,7 @@ export async function updateScheduleItem(
     .eq("id", id);
   revalidatePath("/dashboard");
   revalidatePath("/calendar");
+  revalidatePath("/weekly");
 }
 
 export async function deleteScheduleItem(id: string) {
@@ -58,4 +61,5 @@ export async function deleteScheduleItem(id: string) {
   await supabase.from("schedule_items").delete().eq("id", id);
   revalidatePath("/dashboard");
   revalidatePath("/calendar");
+  revalidatePath("/weekly");
 }
