@@ -2,10 +2,16 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { updateLogStatus } from "@/app/(main)/dashboard/actions";
+import { updateLogStatus, closeLog } from "@/app/(main)/dashboard/actions";
 import { diffDays, formatShortDate } from "@/lib/date";
 import { projectColorClass } from "@/lib/projectColor";
-import { STATUS_LABEL, type JournalStatus, type WorkLog } from "@/types/journal";
+import {
+  STATUS_LABEL,
+  STATUS_BADGE_CLASS,
+  type JournalStatus,
+  type WorkLog,
+} from "@/types/journal";
+import CloseLogPrompt from "./CloseLogPrompt";
 
 const VISIBLE_COUNT = 5;
 
@@ -28,10 +34,18 @@ function OpenLogRow({
   today: string;
 }) {
   const [isPending, startTransition] = useTransition();
+  const [closing, setClosing] = useState(false);
 
   function move(status: JournalStatus) {
     startTransition(async () => {
       await updateLogStatus(log.id, status);
+    });
+  }
+
+  function handleClose(decision: string) {
+    startTransition(async () => {
+      await closeLog(log.id, decision);
+      setClosing(false);
     });
   }
 
@@ -43,60 +57,71 @@ function OpenLogRow({
 
   return (
     <li
-      className={`flex items-start justify-between gap-2 rounded-md border border-gray-100 px-3 py-2 transition-opacity ${
+      className={`rounded-md border border-gray-100 px-3 py-2 transition-opacity ${
         isPending ? "opacity-50" : ""
       }`}
     >
-      <div className="min-w-0 flex-1">
-        <div className="mb-0.5 flex flex-wrap items-center gap-1.5">
-          <Link
-            href={`/projects/${log.project_id}`}
-            className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${projectColorClass(
-              log.project_id
-            )}`}
-          >
-            {projectName}
-          </Link>
-          {badge && (
-            <span
-              className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${badge.className}`}
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <div className="mb-0.5 flex flex-wrap items-center gap-1.5">
+            <Link
+              href={`/projects/${log.project_id}`}
+              className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${projectColorClass(
+                log.project_id
+              )}`}
             >
-              {badge.label}
+              {projectName}
+            </Link>
+            {badge && (
+              <span
+                className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${badge.className}`}
+              >
+                {badge.label}
+              </span>
+            )}
+            <span className="text-[11px] text-gray-400">
+              {formatShortDate(log.date)} 작성
             </span>
-          )}
-          <span className="text-[11px] text-gray-400">
-            기록 {formatShortDate(log.date)}
-          </span>
+          </div>
+          <p className="break-words text-sm text-gray-800">{text}</p>
         </div>
-        <p className="break-words text-sm text-gray-800">{text}</p>
+
+        <div className="flex flex-shrink-0 items-center gap-2">
+          {log.status === "todo" ? (
+            <button
+              onClick={() => move("waiting")}
+              disabled={isPending}
+              className="text-xs text-gray-400 hover:text-violet-600"
+            >
+              대기
+            </button>
+          ) : (
+            <button
+              onClick={() => move("todo")}
+              disabled={isPending}
+              className="whitespace-nowrap text-xs text-gray-400 hover:text-amber-600"
+            >
+              내 할 일
+            </button>
+          )}
+          <button
+            onClick={() => setClosing(true)}
+            disabled={isPending}
+            className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-emerald-100 hover:text-emerald-800"
+          >
+            종료
+          </button>
+        </div>
       </div>
 
-      <div className="flex flex-shrink-0 items-center gap-2">
-        {log.status === "todo" ? (
-          <button
-            onClick={() => move("waiting")}
-            disabled={isPending}
-            className="text-xs text-gray-400 hover:text-violet-600"
-          >
-            대기
-          </button>
-        ) : (
-          <button
-            onClick={() => move("todo")}
-            disabled={isPending}
-            className="whitespace-nowrap text-xs text-gray-400 hover:text-amber-600"
-          >
-            내 할 일
-          </button>
-        )}
-        <button
-          onClick={() => move("done")}
-          disabled={isPending}
-          className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-green-100 hover:text-green-700"
-        >
-          완료
-        </button>
-      </div>
+      {closing && (
+        <CloseLogPrompt
+          defaultDecision={log.decision ?? ""}
+          pending={isPending}
+          onConfirm={handleClose}
+          onCancel={() => setClosing(false)}
+        />
+      )}
     </li>
   );
 }
@@ -119,8 +144,12 @@ function OpenLogGroup({
 
   return (
     <div>
-      <h3 className="mb-1.5 text-xs font-medium text-gray-400">
-        {STATUS_LABEL[status]} {logs.length}
+      <h3 className="mb-1.5">
+        <span
+          className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${STATUS_BADGE_CLASS[status]}`}
+        >
+          {STATUS_LABEL[status]} {logs.length}
+        </span>
       </h3>
       <ul className="space-y-1.5">
         {visible.map((log) => (

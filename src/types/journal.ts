@@ -64,6 +64,7 @@ export interface WorkLog {
   status: JournalStatus;
   next_action: string | null;
   next_action_date: string | null; // YYYY-MM-DD, 선택
+  decision: string | null; // 종료하며 남긴 결정사항, 선택
   created_at: string;
 }
 
@@ -90,8 +91,10 @@ export const STATUS_LABEL: Record<JournalStatus, string> = {
   done: "종료",
 };
 
+// 세 상태가 한눈에 갈리도록 배경을 진하게 하고 테두리(ring)를 둔다.
+// 테두리는 카테고리 배지(테두리 없음)와 상태 배지를 구분하는 역할도 한다.
 export const STATUS_BADGE_CLASS: Record<JournalStatus, string> = {
-  todo: "bg-amber-50 text-amber-700 hover:bg-amber-100",
-  waiting: "bg-violet-50 text-violet-700 hover:bg-violet-100",
-  done: "bg-green-50 text-green-700 hover:bg-green-100",
+  todo: "bg-amber-100 text-amber-900 ring-1 ring-amber-300 hover:bg-amber-200",
+  waiting: "bg-violet-100 text-violet-900 ring-1 ring-violet-300 hover:bg-violet-200",
+  done: "bg-emerald-100 text-emerald-900 ring-1 ring-emerald-300 hover:bg-emerald-200",
 };

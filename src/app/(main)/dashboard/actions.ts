@@ -89,6 +89,7 @@ export async function createLog(
   const status = String(formData.get("status") ?? "todo") as JournalStatus;
   const next_action = String(formData.get("next_action") ?? "").trim();
   const next_action_date = String(formData.get("next_action_date") ?? "").trim();
+  const decision = String(formData.get("decision") ?? "").trim();
   const date = String(formData.get("date") ?? todayKST());
   const log_type = String(formData.get("log_type") ?? "design") as LogType;
 
@@ -122,6 +123,7 @@ export async function createLog(
     status,
     next_action: status === "todo" ? next_action || null : null,
     next_action_date: status === "todo" ? next_action_date || null : null,
+    decision: status === "done" ? decision || null : null,
   });
 
   if (error) {
@@ -158,6 +160,7 @@ export async function updateLog(
   const status = String(formData.get("status") ?? "todo") as JournalStatus;
   const next_action = String(formData.get("next_action") ?? "").trim();
   const next_action_date = String(formData.get("next_action_date") ?? "").trim();
+  const decision = String(formData.get("decision") ?? "").trim();
 
   if (!content) {
     return { error: "내용을 입력해주세요.", success: false };
@@ -193,6 +196,7 @@ export async function updateLog(
       status,
       next_action: status === "todo" ? next_action || null : null,
       next_action_date: status === "todo" ? next_action_date || null : null,
+      decision: status === "done" ? decision || null : null,
     })
     .eq("id", id);
 
@@ -205,6 +209,23 @@ export async function updateLog(
   revalidatePath("/calendar");
   revalidatePath(`/projects/${existing.project_id}`);
   return { error: null, success: true, submittedAt: Date.now() };
+}
+
+// 종료 전용. 결정사항을 비워서 부르면 '그냥 종료'이고, 이때 기존 결정사항은
+// 지우지 않는다(상태를 되돌렸다가 다시 종료해도 적어둔 내용이 살아남는다).
+export async function closeLog(id: string, decision: string) {
+  const supabase = await createClient();
+  const trimmed = decision.trim();
+  const { data } = await supabase
+    .from("work_logs")
+    .update(trimmed ? { status: "done", decision: trimmed } : { status: "done" })
+    .eq("id", id)
+    .select("project_id")
+    .single();
+  revalidatePath("/dashboard");
+  revalidatePath("/journal");
+  revalidatePath("/calendar");
+  if (data?.project_id) revalidatePath(`/projects/${data.project_id}`);
 }
 
 export async function updateLogStatus(id: string, status: JournalStatus) {

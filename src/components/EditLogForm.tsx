@@ -106,6 +106,7 @@ export default function EditLogForm({
         defaultStatus={log.status}
         defaultNextAction={log.next_action ?? ""}
         defaultNextActionDate={log.next_action_date ?? ""}
+        defaultDecision={log.decision ?? ""}
       />
 
       <div className="flex items-center gap-3">

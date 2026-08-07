@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import {
   updateLogStatus,
+  closeLog,
   deleteLog,
 } from "@/app/(main)/dashboard/actions";
 import {
@@ -16,6 +17,7 @@ import {
 import { categoryBadges } from "@/lib/categoryDisplay";
 import ProjectFiles from "./ProjectFiles";
 import EditLogForm from "./EditLogForm";
+import CloseLogPrompt from "./CloseLogPrompt";
 import type { ProjectFile } from "@/types/project";
 
 export default function JournalEntryCard({
@@ -29,13 +31,26 @@ export default function JournalEntryCard({
 }) {
   const [isPending, startTransition] = useTransition();
   const [editing, setEditing] = useState(false);
+  const [closing, setClosing] = useState(false);
 
   // 배지를 누르면 내가 할 일 → 답변 대기 → 종료 → ... 순으로 넘어간다.
+  // 종료로 넘어갈 때만 결정사항을 남길지 물어본다.
   function cycleStatus() {
     const next =
       STATUS_OPTIONS[(STATUS_OPTIONS.indexOf(log.status) + 1) % STATUS_OPTIONS.length];
+    if (next === "done") {
+      setClosing(true);
+      return;
+    }
     startTransition(async () => {
       await updateLogStatus(log.id, next);
+    });
+  }
+
+  function handleClose(decision: string) {
+    startTransition(async () => {
+      await closeLog(log.id, decision);
+      setClosing(false);
     });
   }
 
@@ -98,6 +113,12 @@ export default function JournalEntryCard({
               {log.result}
             </p>
           )}
+          {log.status === "done" && log.decision && (
+            <p className="mt-1.5 whitespace-pre-wrap break-words rounded-md bg-emerald-50 px-2 py-1 text-sm text-emerald-900">
+              <span className="font-medium">결정 </span>
+              {log.decision}
+            </p>
+          )}
           {log.status === "todo" && log.next_action && (
             <p className="mt-1.5 whitespace-pre-wrap break-words rounded-md bg-amber-50 px-2 py-1 text-sm text-amber-800">
               <span className="font-medium">할 일 </span>
@@ -142,6 +163,15 @@ export default function JournalEntryCard({
           </button>
         </div>
       </div>
+
+      {closing && (
+        <CloseLogPrompt
+          defaultDecision={log.decision ?? ""}
+          pending={isPending}
+          onConfirm={handleClose}
+          onCancel={() => setClosing(false)}
+        />
+      )}
     </li>
   );
 }
