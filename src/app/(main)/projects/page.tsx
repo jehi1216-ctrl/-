@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import type { Project, ChecklistGroup, ChecklistItem } from "@/types/project";
+import type { JournalStatus } from "@/types/journal";
 import ProjectListTabs from "@/components/ProjectListTabs";
 
 export default async function ProjectsPage() {
@@ -44,12 +45,29 @@ export default async function ProjectsPage() {
     groupsByProject.set(g.project_id, bucket);
   }
 
+  // 아직 끝나지 않은 일지도 카드에 건수만 요약한다. 상태만 쓰므로 두 칼럼만 가져온다.
+  const { data: openLogRows } = await supabase
+    .from("work_logs")
+    .select("project_id, status")
+    .eq("user_id", user!.id)
+    .in("status", ["todo", "waiting"]);
+
+  const openLogCounts = new Map<string, Partial<Record<JournalStatus, number>>>();
+  for (const log of (openLogRows ?? []) as {
+    project_id: string;
+    status: JournalStatus;
+  }[]) {
+    const bucket = openLogCounts.get(log.project_id) ?? {};
+    bucket[log.status] = (bucket[log.status] ?? 0) + 1;
+    openLogCounts.set(log.project_id, bucket);
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-lg font-semibold">프로젝트(현장)</h1>
-          <p className="text-sm text-gray-500">진행 중인 현장을 관리하세요.</p>
+          <h1 className="text-lg font-semibold">프로젝트</h1>
+          <p className="text-sm text-gray-500">진행 중인 프로젝트를 관리하세요.</p>
         </div>
         <Link
           href="/projects/new"
@@ -68,6 +86,7 @@ export default async function ProjectsPage() {
           projects={list}
           checklistsByProject={Object.fromEntries(checklistsByProject)}
           groupsByProject={Object.fromEntries(groupsByProject)}
+          openLogCounts={Object.fromEntries(openLogCounts)}
         />
       )}
     </div>

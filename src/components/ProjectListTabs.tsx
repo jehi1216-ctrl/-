@@ -64,16 +64,27 @@ function areaSummary(p: Project): string | null {
   if (floorRatio != null) parts.push(`용적률 ${formatRatio(floorRatio)}`);
   return parts.length > 0 ? parts.join(" · ") : null;
 }
-import { LOG_TYPE_LABEL, type LogType } from "@/types/journal";
+import {
+  LOG_TYPE_LABEL,
+  STATUS_LABEL,
+  STATUS_BADGE_CLASS,
+  type LogType,
+  type JournalStatus,
+} from "@/types/journal";
+
+// 카드에는 아직 안 끝난 일지(내가 할 일 / 답변 대기)만 건수로 보여준다.
+const OPEN_LOG_STATUSES: JournalStatus[] = ["todo", "waiting"];
 
 export default function ProjectListTabs({
   projects,
   checklistsByProject = {},
   groupsByProject = {},
+  openLogCounts = {},
 }: {
   projects: Project[];
   checklistsByProject?: Record<string, ChecklistItem[]>;
   groupsByProject?: Record<string, ChecklistGroup[]>;
+  openLogCounts?: Record<string, Partial<Record<JournalStatus, number>>>;
 }) {
   const [tab, setTab] = useState<LogType>("design");
   const filtered = projects.filter((p) => PHASES_BY_TYPE[tab].includes(p.phase));
@@ -99,7 +110,7 @@ export default function ProjectListTabs({
 
       {filtered.length === 0 ? (
         <p className="rounded-lg border border-dashed border-gray-300 p-6 text-center text-sm text-gray-400">
-          해당하는 현장이 없어요.
+          해당하는 프로젝트가 없어요.
         </p>
       ) : (
         <ul className="space-y-3">
@@ -107,6 +118,10 @@ export default function ProjectListTabs({
             const area = areaSummary(p);
             const openItems = checklistsByProject[p.id] ?? [];
             const folders = folderSummary(openItems, groupsByProject[p.id] ?? []);
+            const logCounts = OPEN_LOG_STATUSES.map((status) => ({
+              status,
+              count: openLogCounts[p.id]?.[status] ?? 0,
+            })).filter((c) => c.count > 0);
             return (
               <li key={p.id}>
                 <Link
@@ -127,6 +142,19 @@ export default function ProjectListTabs({
                     </p>
                   )}
                   {area && <p className="mt-1 text-xs text-gray-400">{area}</p>}
+                  {logCounts.length > 0 && (
+                    <div className="mt-2 flex flex-wrap items-center gap-1">
+                      <span className="mr-0.5 text-xs text-gray-400">일지</span>
+                      {logCounts.map(({ status, count }) => (
+                        <span
+                          key={status}
+                          className={`rounded-full px-1.5 py-0.5 text-xs font-medium ${STATUS_BADGE_CLASS[status]}`}
+                        >
+                          {STATUS_LABEL[status]} {count}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                   {folders.length > 0 && (
                     <ul className="mt-2 space-y-1 border-t border-gray-100 pt-2">
                       {folders.map((folder) => (
