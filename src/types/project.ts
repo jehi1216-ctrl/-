@@ -108,6 +108,13 @@ export interface ChecklistItem {
   created_at: string;
 }
 
+// 체크리스트 담당자로 '나'를 고른 경우. 협력업체가 아니라 본인이므로
+// assignee_contact_id는 비우고 레거시 자유 입력 칸(assignee)에 이 문구를 넣는다.
+// 덕분에 표시/그룹핑 폴백이 그대로 동작하고 마이그레이션도 필요 없다.
+// ME_OPTION_VALUE는 담당자 <select>에서만 쓰는 값으로, DB에는 저장되지 않는다.
+export const ME_ASSIGNEE = "나";
+export const ME_OPTION_VALUE = "me";
+
 export const PHASE_OPTIONS: ProjectPhase[] = [
   "design",
   "permit",

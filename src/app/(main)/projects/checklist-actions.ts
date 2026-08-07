@@ -3,7 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import type { FormState } from "@/app/(main)/dashboard/formState";
-import { CHECKLIST_STATUS_OPTIONS, type ChecklistStatus } from "@/types/project";
+import {
+  CHECKLIST_STATUS_OPTIONS,
+  ME_ASSIGNEE,
+  ME_OPTION_VALUE,
+  type ChecklistStatus,
+} from "@/types/project";
 
 export async function addChecklistItem(
   projectId: string,
@@ -24,7 +29,9 @@ export async function addChecklistItem(
     return { error: "할 일 내용을 입력해주세요.", success: false };
   }
 
-  const assignee_contact_id = String(formData.get("assignee_contact_id") ?? "").trim() || null;
+  const assigneeChoice = String(formData.get("assignee_contact_id") ?? "").trim();
+  const isMe = assigneeChoice === ME_OPTION_VALUE;
+  const assignee_contact_id = isMe ? null : assigneeChoice || null;
   const statusInput = String(formData.get("status") ?? "준비");
   const status = (
     CHECKLIST_STATUS_OPTIONS as readonly string[]
@@ -37,6 +44,7 @@ export async function addChecklistItem(
     user_id: user.id,
     content,
     assignee_contact_id,
+    assignee: isMe ? ME_ASSIGNEE : null,
     status,
   });
 
@@ -60,12 +68,23 @@ export async function updateChecklistItem(
   const content = String(formData.get("content") ?? "").trim();
   if (!content) return;
 
-  const assignee_contact_id = String(formData.get("assignee_contact_id") ?? "").trim() || null;
+  const assigneeChoice = String(formData.get("assignee_contact_id") ?? "").trim();
+  const isMe = assigneeChoice === ME_OPTION_VALUE;
+  const assignee_contact_id = isMe ? null : assigneeChoice || null;
   const note = String(formData.get("note") ?? "").trim() || null;
+
+  // 담당자를 '나'에서 다른 값으로 바꾸면 '나' 표시는 지운다. 다만 마이그레이션 이전에
+  // 자유 입력으로 들어간 이름은 폼에 보이지 않으므로 임의로 지우지 않고 그대로 둔다.
+  const prevAssignee = String(formData.get("prev_assignee") ?? "").trim();
+  const assignee = isMe
+    ? ME_ASSIGNEE
+    : prevAssignee === ME_ASSIGNEE
+      ? null
+      : prevAssignee || null;
 
   const { error } = await supabase
     .from("project_checklist_items")
-    .update({ content, assignee_contact_id, note })
+    .update({ content, assignee_contact_id, assignee, note })
     .eq("id", itemId);
 
   if (error) console.error("updateChecklistItem failed:", error.message);

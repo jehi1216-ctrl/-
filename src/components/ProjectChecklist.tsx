@@ -11,6 +11,8 @@ import { initialFormState, type FormState } from "@/app/(main)/dashboard/formSta
 import {
   CHECKLIST_STATUS_OPTIONS,
   CHECKLIST_STATUS_BADGE_CLASS,
+  ME_ASSIGNEE,
+  ME_OPTION_VALUE,
   type ChecklistItem,
   type ChecklistStatus,
   type ProjectContact,
@@ -105,12 +107,17 @@ export default function ProjectChecklist({
               placeholder="할 일 *"
               className={`col-span-2 ${inputClass} sm:col-span-4`}
             />
+            <input type="hidden" name="prev_assignee" value={item.assignee ?? ""} />
             <select
               name="assignee_contact_id"
-              defaultValue={item.assignee_contact_id ?? ""}
+              defaultValue={
+                item.assignee_contact_id ??
+                (item.assignee === ME_ASSIGNEE ? ME_OPTION_VALUE : "")
+              }
               className={inputClass}
             >
               <option value="">담당자 없음</option>
+              <option value={ME_OPTION_VALUE}>{ME_ASSIGNEE}</option>
               {contacts.map((c) => (
                 <option key={c.id} value={c.id}>
                   {contactLabel(c)}
@@ -218,7 +225,10 @@ export default function ProjectChecklist({
           bucket.push(item);
           map.set(label, bucket);
         }
+        // 내 몫을 맨 위로, 담당자 없는 항목을 맨 아래로.
         return [...map.entries()].sort(([a], [b]) => {
+          if (a === ME_ASSIGNEE) return -1;
+          if (b === ME_ASSIGNEE) return 1;
           if (a === "담당자 없음") return 1;
           if (b === "담당자 없음") return -1;
           return 0;
@@ -261,6 +271,7 @@ export default function ProjectChecklist({
         <input name="content" required placeholder="할 일 *" className={`col-span-2 ${inputClass}`} />
         <select name="assignee_contact_id" defaultValue="" className={inputClass}>
           <option value="">담당자 없음</option>
+          <option value={ME_OPTION_VALUE}>{ME_ASSIGNEE}</option>
           {contacts.map((c) => (
             <option key={c.id} value={c.id}>
               {contactLabel(c)}
