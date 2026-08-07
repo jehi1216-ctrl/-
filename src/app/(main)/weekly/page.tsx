@@ -29,6 +29,7 @@ const BUCKET_LABEL: Record<Bucket, string> = {
 interface WeeklyItem {
   log: WorkLog;
   bucket: Bucket;
+  label: string;
 }
 
 interface ProjectGroup {
@@ -75,7 +76,9 @@ export default async function WeeklyPage({
   const groups = new Map<string, ProjectGroup>();
 
   for (const log of (logs ?? []) as WorkLog[]) {
-    if (!log.next_action) continue;
+    // 배지를 눌러 '내가 할 일'로 바꾼 일지는 next_action이 비어 있다.
+    // 미처리 모아보기와 똑같이 기록 본문으로 대신 보여준다.
+    const label = log.next_action || log.content;
 
     const due = log.next_action_date;
     let bucket: Bucket;
@@ -99,7 +102,7 @@ export default async function WeeklyPage({
       overdueCount: 0,
       earliestDate: null,
     };
-    group.items.push({ log, bucket });
+    group.items.push({ log, bucket, label });
     if (bucket === "overdue") group.overdueCount += 1;
     if (due && (group.earliestDate === null || due < group.earliestDate)) {
       group.earliestDate = due;
@@ -196,7 +199,7 @@ export default async function WeeklyPage({
               </div>
 
               <ul className="space-y-2">
-                {group.items.map(({ log, bucket }, index, all) => {
+                {group.items.map(({ log, bucket, label }, index, all) => {
                   const badge = log.next_action_date
                     ? dueBadge(log.next_action_date, today)
                     : null;
@@ -230,7 +233,7 @@ export default async function WeeklyPage({
                           className="min-w-0 break-words text-sm text-gray-800"
                           title={log.content}
                         >
-                          {log.next_action}
+                          {label}
                         </span>
                       </div>
                     </li>
