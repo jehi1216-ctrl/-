@@ -94,7 +94,13 @@ function OpenLogRow({
               {formatShortDate(log.date)} 작성
             </span>
           </div>
-          <p className="break-words text-sm text-gray-800">{text}</p>
+          <p className="whitespace-pre-wrap break-words text-sm text-gray-800">{text}</p>
+          {log.result && (
+            <p className="mt-1 whitespace-pre-wrap break-words border-l-2 border-gray-200 pl-2 text-xs text-gray-500">
+              <span className="font-medium text-gray-400">결과 </span>
+              {log.result}
+            </p>
+          )}
         </div>
 
         <div className="flex flex-shrink-0 items-center gap-2">
