@@ -33,7 +33,7 @@ export const REVIEW_SUBOPTIONS = ["규모검토", "디자인검토", "견적검�
 export const DESIGN_SUBOPTIONS = ["법적근거", "CAD", "3D"] as const;
 export const PERMIT_DISCIPLINES = ["건축", "토목", "구조"] as const;
 export const PERMIT_STAGES = ["심의", "허가", "사용승인"] as const;
-export const CONSULT_SUBOPTIONS = ["구조", "토목", "MEP", "업체협의"] as const;
+export const CONSULT_SUBOPTIONS = ["구조", "토목", "MEP", "업체협의", "발주처"] as const;
 export const NUMBERED_CATEGORIES = ["협의", "PT", "브랜딩"] as const;
 
 export interface NumberedEntry {
