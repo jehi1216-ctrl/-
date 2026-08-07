@@ -88,11 +88,15 @@ export const CHECKLIST_STATUS_OPTIONS: ChecklistStatus[] = [
   "완료",
 ];
 
+// 네 상태가 확실히 갈리도록 배경을 진하게 하고 테두리(ring)를 둔다. 특히 '진행중'은
+// 지금 굴러가는 항목이라 가장 눈에 띄게 한 단계 더 진한 인디고를 쓴다.
+// 이 클래스는 <select>에 그대로 붙으므로 글자색은 어둡게 유지할 것 —
+// 흰 글자로 두면 브라우저에 따라 펼친 목록의 항목이 안 보인다.
 export const CHECKLIST_STATUS_BADGE_CLASS: Record<ChecklistStatus, string> = {
-  준비: "bg-gray-100 text-gray-600",
-  협의중: "bg-amber-50 text-amber-700",
-  진행중: "bg-blue-50 text-blue-700",
-  완료: "bg-green-50 text-green-700",
+  준비: "bg-gray-100 text-gray-600 ring-1 ring-gray-300",
+  협의중: "bg-amber-100 text-amber-900 ring-1 ring-amber-300",
+  진행중: "bg-indigo-200 text-indigo-900 ring-1 ring-indigo-500",
+  완료: "bg-emerald-100 text-emerald-900 ring-1 ring-emerald-300",
 };
 
 export interface ChecklistItem {
