@@ -10,6 +10,62 @@ import {
   type ChecklistStatus,
 } from "@/types/project";
 
+function revalidateChecklist(projectId: string) {
+  revalidatePath(`/projects/${projectId}`);
+  revalidatePath("/dashboard");
+  revalidatePath("/checklist");
+}
+
+export async function addChecklistGroup(projectId: string, formData: FormData) {
+  const name = String(formData.get("name") ?? "").trim();
+  if (!name) return;
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const { error } = await supabase.from("project_checklist_groups").insert({
+    project_id: projectId,
+    user_id: user.id,
+    name,
+  });
+  if (error) console.error("addChecklistGroup failed:", error.message);
+
+  revalidateChecklist(projectId);
+}
+
+export async function renameChecklistGroup(
+  projectId: string,
+  groupId: string,
+  name: string
+) {
+  const trimmed = name.trim();
+  if (!trimmed) return;
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("project_checklist_groups")
+    .update({ name: trimmed })
+    .eq("id", groupId);
+  if (error) console.error("renameChecklistGroup failed:", error.message);
+
+  revalidateChecklist(projectId);
+}
+
+// 폴더만 지운다. 담겨 있던 항목은 group_id가 null이 되어 '폴더 없음'으로 남는다.
+export async function deleteChecklistGroup(projectId: string, groupId: string) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("project_checklist_groups")
+    .delete()
+    .eq("id", groupId);
+  if (error) console.error("deleteChecklistGroup failed:", error.message);
+
+  revalidateChecklist(projectId);
+}
+
 export async function addChecklistItem(
   projectId: string,
   _prevState: FormState,
@@ -43,6 +99,7 @@ export async function addChecklistItem(
     project_id: projectId,
     user_id: user.id,
     content,
+    group_id: String(formData.get("group_id") ?? "").trim() || null,
     assignee_contact_id,
     assignee: isMe ? ME_ASSIGNEE : null,
     status,
@@ -84,7 +141,13 @@ export async function updateChecklistItem(
 
   const { error } = await supabase
     .from("project_checklist_items")
-    .update({ content, assignee_contact_id, assignee, note })
+    .update({
+      content,
+      group_id: String(formData.get("group_id") ?? "").trim() || null,
+      assignee_contact_id,
+      assignee,
+      note,
+    })
     .eq("id", itemId);
 
   if (error) console.error("updateChecklistItem failed:", error.message);

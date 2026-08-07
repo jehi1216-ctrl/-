@@ -104,6 +104,7 @@ export interface ChecklistItem {
   project_id: string;
   user_id: string;
   content: string;
+  group_id: string | null; // 담긴 폴더. null이면 '폴더 없음'
   assignee: string | null;
   assignee_contact_id: string | null;
   status: ChecklistStatus;
@@ -111,6 +112,18 @@ export interface ChecklistItem {
   note: string | null;
   created_at: string;
 }
+
+// 체크리스트 폴더. 현장 아래에서 항목을 묶는 상위 개념(예: "설계변경 보완사항").
+export interface ChecklistGroup {
+  id: string;
+  user_id: string;
+  project_id: string;
+  name: string;
+  created_at: string;
+}
+
+// 폴더에 담기지 않은 항목을 모아 보여줄 때 쓰는 이름.
+export const NO_GROUP_LABEL = "폴더 없음";
 
 // 체크리스트 담당자로 '나'를 고른 경우. 협력업체가 아니라 본인이므로
 // assignee_contact_id는 비우고 레거시 자유 입력 칸(assignee)에 이 문구를 넣는다.

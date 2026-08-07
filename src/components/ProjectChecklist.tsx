@@ -13,6 +13,8 @@ import {
   CHECKLIST_STATUS_BADGE_CLASS,
   ME_ASSIGNEE,
   ME_OPTION_VALUE,
+  NO_GROUP_LABEL,
+  type ChecklistGroup,
   type ChecklistItem,
   type ChecklistStatus,
   type ProjectContact,
@@ -36,6 +38,8 @@ export default function ProjectChecklist({
   compact = false,
   title = "체크리스트",
   groupByAssignee = false,
+  groups = [],
+  groupId = null,
 }: {
   projectId: string;
   items: ChecklistItem[];
@@ -43,6 +47,9 @@ export default function ProjectChecklist({
   compact?: boolean;
   title?: string;
   groupByAssignee?: boolean;
+  // 폴더 목록(수정 폼에서 항목을 옮길 때 쓴다)과, 이 목록이 속한 폴더(추가 시 기본값).
+  groups?: ChecklistGroup[];
+  groupId?: string | null;
 }) {
   const [isPending, startTransition] = useTransition();
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -124,11 +131,27 @@ export default function ProjectChecklist({
                 </option>
               ))}
             </select>
+            {groups.length > 0 ? (
+              <select
+                name="group_id"
+                defaultValue={item.group_id ?? ""}
+                className={inputClass}
+              >
+                <option value="">{NO_GROUP_LABEL}</option>
+                {groups.map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {g.name}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input type="hidden" name="group_id" value={item.group_id ?? ""} />
+            )}
             <input
               name="note"
               defaultValue={item.note ?? ""}
               placeholder="코멘트"
-              className={`col-span-2 ${inputClass} sm:col-span-3`}
+              className={`col-span-2 ${inputClass} sm:col-span-2`}
             />
             <div className="col-span-2 flex gap-2 sm:col-span-4">
               <button
@@ -268,6 +291,7 @@ export default function ProjectChecklist({
       )}
 
       <form ref={formRef} action={formAction} className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <input type="hidden" name="group_id" value={groupId ?? ""} />
         <input name="content" required placeholder="할 일 *" className={`col-span-2 ${inputClass}`} />
         <select name="assignee_contact_id" defaultValue="" className={inputClass}>
           <option value="">담당자 없음</option>

@@ -8,6 +8,7 @@ import {
   PHASE_BADGE_CLASS,
   PHASES_BY_TYPE,
   type Project,
+  type ChecklistGroup,
   type ChecklistItem,
   type ChecklistStatus,
   type ProjectContact,
@@ -102,15 +103,25 @@ export default async function ChecklistPage({
     itemsByProject.set(item.project_id, bucket);
   }
 
-  // 협력업체(담당자 선택지)는 펼친 현장에서만 쓴다.
+  // 협력업체(담당자 선택지)와 폴더는 펼친 현장에서만 쓴다.
   let contacts: ProjectContact[] = [];
+  let groups: ChecklistGroup[] = [];
   if (activeProject) {
-    const { data } = await supabase
-      .from("project_contacts")
-      .select("*")
-      .eq("user_id", user!.id)
-      .eq("project_id", activeProject.id);
-    contacts = (data ?? []) as ProjectContact[];
+    const [{ data: contactRows }, { data: groupRows }] = await Promise.all([
+      supabase
+        .from("project_contacts")
+        .select("*")
+        .eq("user_id", user!.id)
+        .eq("project_id", activeProject.id),
+      supabase
+        .from("project_checklist_groups")
+        .select("*")
+        .eq("user_id", user!.id)
+        .eq("project_id", activeProject.id)
+        .order("created_at", { ascending: true }),
+    ]);
+    contacts = (contactRows ?? []) as ProjectContact[];
+    groups = (groupRows ?? []) as ChecklistGroup[];
   }
 
   if (projectList.length === 0) {
@@ -145,6 +156,7 @@ export default async function ChecklistPage({
 
         <ChecklistBoard
           project={activeProject}
+          groups={groups}
           items={itemsByProject.get(activeProject.id) ?? []}
           contacts={contacts}
         />
