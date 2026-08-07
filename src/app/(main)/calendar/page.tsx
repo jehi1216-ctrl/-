@@ -2,22 +2,10 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { currentMonthKST, shiftMonth, buildMonthGrid, todayKST } from "@/lib/date";
 import { projectColorClass } from "@/lib/projectColor";
+import CalendarGrid, { type CalendarEntry } from "@/components/CalendarGrid";
 import type { ScheduleItem } from "@/types/schedule";
 import type { WorkLog } from "@/types/journal";
 import type { Project } from "@/types/project";
-
-const WEEKDAY_LABELS = ["일", "월", "화", "수", "목", "금", "토"];
-
-// 캘린더 한 칸에 들어가는 항목. 일정(schedule_items)과 일지의 '내가 할 일'을 함께 보여준다.
-type CalendarEntry =
-  | { kind: "schedule"; id: string; label: string; done: boolean }
-  | {
-      kind: "todo";
-      id: string;
-      label: string;
-      projectId: string;
-      projectName: string;
-    };
 
 export default async function CalendarPage({
   searchParams,
@@ -89,18 +77,22 @@ export default async function CalendarPage({
       label: log.next_action,
       projectId: log.project_id,
       projectName,
+      content: log.content,
+      logDate: log.date,
     });
   }
 
   const [y, m] = month.split("-").map(Number);
-  const today = todayKST();
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-lg font-semibold">
-          {y}년 {m}월
-        </h1>
+        <div>
+          <h1 className="text-lg font-semibold">
+            {y}년 {m}월
+          </h1>
+          <p className="text-sm text-gray-500">날짜를 누르면 그날 내용을 볼 수 있어요.</p>
+        </div>
         <div className="flex items-center gap-1">
           <Link
             href={`/calendar?month=${shiftMonth(month, -1)}`}
@@ -137,82 +129,11 @@ export default async function CalendarPage({
         </div>
       )}
 
-      <div className="overflow-x-auto">
-        <div className="min-w-[640px] rounded-xl border border-gray-200 bg-white shadow-sm">
-          <div className="grid grid-cols-7 border-b border-gray-100 text-center text-xs font-medium text-gray-400">
-            {WEEKDAY_LABELS.map((w) => (
-              <div key={w} className="py-2">
-                {w}
-              </div>
-            ))}
-          </div>
-          {weeks.map((week, wi) => (
-            <div
-              key={wi}
-              className="grid grid-cols-7 border-b border-gray-100 last:border-b-0"
-            >
-              {week.map((cell) => {
-                const dayItems = itemsByDate.get(cell.date) ?? [];
-                const dayNum = Number(cell.date.slice(8, 10));
-                const isToday = cell.date === today;
-                return (
-                  <div
-                    key={cell.date}
-                    className={`flex min-h-[96px] flex-col gap-1 border-r border-gray-100 p-1.5 text-left last:border-r-0 ${
-                      cell.inMonth ? "" : "bg-gray-50/50"
-                    }`}
-                  >
-                    <span
-                      className={`text-xs ${
-                        isToday
-                          ? "flex h-5 w-5 items-center justify-center rounded-full bg-brand-600 font-semibold text-white"
-                          : cell.inMonth
-                            ? "text-gray-500"
-                            : "text-gray-300"
-                      }`}
-                    >
-                      {dayNum}
-                    </span>
-                    <div className="flex flex-col gap-0.5">
-                      {dayItems.slice(0, 3).map((item) =>
-                        item.kind === "todo" ? (
-                          <Link
-                            key={item.id}
-                            href={`/projects/${item.projectId}`}
-                            className={`truncate rounded px-1 py-0.5 text-[10px] font-medium ${projectColorClass(
-                              item.projectId
-                            )}`}
-                            title={`[${item.projectName}] ${item.label}`}
-                          >
-                            {item.label}
-                          </Link>
-                        ) : (
-                          <span
-                            key={item.id}
-                            className={`truncate rounded px-1 py-0.5 text-[10px] ${
-                              item.done
-                                ? "bg-gray-100 text-gray-400 line-through"
-                                : "bg-brand-50 text-brand-700"
-                            }`}
-                            title={item.label}
-                          >
-                            {item.label}
-                          </span>
-                        )
-                      )}
-                      {dayItems.length > 3 && (
-                        <span className="text-[10px] text-gray-400">
-                          +{dayItems.length - 3}건 더
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ))}
-        </div>
-      </div>
+      <CalendarGrid
+        weeks={weeks}
+        entriesByDate={Object.fromEntries(itemsByDate)}
+        today={todayKST()}
+      />
     </div>
   );
 }
