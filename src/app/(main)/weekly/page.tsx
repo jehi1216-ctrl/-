@@ -38,6 +38,7 @@ interface WeeklyItem {
   date: string | null;
   isSchedule: boolean;
   hint?: string; // 마우스를 올렸을 때 보여줄 원본 기록 본문
+  result?: string | null; // 일지에 적어둔 결과
 }
 
 interface ProjectGroup {
@@ -143,6 +144,7 @@ export default async function WeeklyPage({
       date: bucket === "waiting" ? null : log.next_action_date,
       isSchedule: false,
       hint: log.content,
+      result: log.result,
     });
   }
 
@@ -284,16 +286,32 @@ export default async function WeeklyPage({
                               ? badge!.label
                               : `${weekdayOf(item.date)} ${formatShortDate(item.date)}`}
                         </span>
-                        <span className="min-w-0 break-words text-sm text-gray-800">
-                          {item.isSchedule && (
-                            <span className="mr-1.5 rounded bg-gray-100 px-1.5 py-0.5 align-middle text-[11px] font-medium text-gray-500">
-                              일정
+                        <div className="min-w-0 flex-1">
+                          <span className="break-words text-sm text-gray-800">
+                            {item.isSchedule && (
+                              <span className="mr-1.5 rounded bg-gray-100 px-1.5 py-0.5 align-middle text-[11px] font-medium text-gray-500">
+                                일정
+                              </span>
+                            )}
+                            <span className="align-middle" title={item.hint}>
+                              {item.label}
                             </span>
-                          )}
-                          <span className="align-middle" title={item.hint}>
-                            {item.label}
                           </span>
-                        </span>
+                          {item.result && (
+                            // 답변 대기는 '지금 어디까지 와 있나'가 핵심이라 결과를
+                            // 상태 색(보라)으로 눈에 띄게 띄운다.
+                            <p
+                              className={`mt-1 whitespace-pre-wrap break-words rounded-md px-2 py-1 text-xs ${
+                                item.bucket === "waiting"
+                                  ? "bg-violet-50 text-violet-900 ring-1 ring-violet-200"
+                                  : "border-l-2 border-gray-200 pl-2 text-gray-500"
+                              }`}
+                            >
+                              <span className="font-semibold">결과 </span>
+                              {item.result}
+                            </p>
+                          )}
+                        </div>
                       </div>
                     </li>
                   );
