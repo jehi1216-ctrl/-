@@ -12,6 +12,7 @@ import {
   type WorkLog,
 } from "@/types/journal";
 import CloseLogPrompt from "./CloseLogPrompt";
+import EditLogForm from "./EditLogForm";
 
 const VISIBLE_COUNT = 5;
 
@@ -35,6 +36,7 @@ function OpenLogRow({
 }) {
   const [isPending, startTransition] = useTransition();
   const [closing, setClosing] = useState(false);
+  const [editing, setEditing] = useState(false);
 
   function move(status: JournalStatus) {
     startTransition(async () => {
@@ -54,6 +56,15 @@ function OpenLogRow({
     log.status === "todo" && log.next_action_date
       ? dueBadge(log.next_action_date, today)
       : null;
+
+  // 수정은 일지 전체를 고치는 일이라 카드와 같은 폼을 그대로 연다.
+  if (editing) {
+    return (
+      <li>
+        <EditLogForm log={log} onCancel={() => setEditing(false)} />
+      </li>
+    );
+  }
 
   return (
     <li
@@ -87,6 +98,13 @@ function OpenLogRow({
         </div>
 
         <div className="flex flex-shrink-0 items-center gap-2">
+          <button
+            onClick={() => setEditing(true)}
+            disabled={isPending}
+            className="text-xs text-gray-400 hover:text-brand-600"
+          >
+            수정
+          </button>
           {log.status === "todo" ? (
             <button
               onClick={() => move("waiting")}
