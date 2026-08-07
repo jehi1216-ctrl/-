@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { updateLogStatus, closeLog } from "@/app/(main)/dashboard/actions";
-import { diffDays, formatShortDate } from "@/lib/date";
+import { dueBadge, formatShortDate } from "@/lib/date";
 import { projectColorClass } from "@/lib/projectColor";
 import {
   STATUS_LABEL,
@@ -15,15 +15,6 @@ import CloseLogPrompt from "./CloseLogPrompt";
 import EditLogForm from "./EditLogForm";
 
 const VISIBLE_COUNT = 5;
-
-// 마감일까지 남은 기간을 배지 문구/색으로 바꾼다. 지난 것과 오늘 것만 눈에 띄게 한다.
-function dueBadge(dueDate: string, today: string) {
-  const days = diffDays(today, dueDate);
-  if (days < 0) return { label: `${-days}일 지남`, className: "bg-red-100 text-red-700" };
-  if (days === 0) return { label: "오늘", className: "bg-red-100 text-red-700" };
-  if (days <= 7) return { label: `D-${days}`, className: "bg-amber-100 text-amber-700" };
-  return { label: formatShortDate(dueDate), className: "bg-gray-100 text-gray-500" };
-}
 
 function OpenLogRow({
   log,

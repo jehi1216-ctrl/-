@@ -32,6 +32,56 @@ export function formatShortDate(dateStr: string): string {
   return `${m}/${d}`;
 }
 
+// ── 주 단위 (월요일 시작) ────────────────────────────────────
+// 주는 항상 시작일(월요일) 날짜 문자열로 나타낸다.
+
+function shiftDays(dateStr: string, delta: number): string {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const date = new Date(Date.UTC(y, m - 1, d + delta));
+  return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`;
+}
+
+export function weekStartOf(dateStr: string): string {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  // getUTCDay(): 0=일 … 6=토. 월요일부터 며칠 지났는지로 바꾼다.
+  const offset = (new Date(Date.UTC(y, m - 1, d)).getUTCDay() + 6) % 7;
+  return shiftDays(dateStr, -offset);
+}
+
+export function currentWeekKST(): string {
+  return weekStartOf(todayKST());
+}
+
+export function shiftWeek(weekStart: string, delta: number): string {
+  return shiftDays(weekStart, delta * 7);
+}
+
+export function weekEndOf(weekStart: string): string {
+  return shiftDays(weekStart, 6);
+}
+
+export function formatWeekRange(weekStart: string): string {
+  const [sy, sm, sd] = weekStart.split("-").map(Number);
+  const [ey, em, ed] = weekEndOf(weekStart).split("-").map(Number);
+  const end = sy === ey ? `${em}월 ${ed}일` : `${ey}년 ${em}월 ${ed}일`;
+  return `${sy}년 ${sm}월 ${sd}일 ~ ${end}`;
+}
+
+export function weekdayOf(dateStr: string): string {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return WEEKDAYS[new Date(Date.UTC(y, m - 1, d)).getUTCDay()];
+}
+
+// 마감일이 얼마나 급한지를 배지 문구/색으로 바꾼다. 미처리 모아보기와 주간 업무가
+// 같은 규칙을 쓰도록 여기 한 곳에만 둔다.
+export function dueBadge(dueDate: string, today: string) {
+  const days = diffDays(today, dueDate);
+  if (days < 0) return { label: `${-days}일 지남`, className: "bg-red-100 text-red-700" };
+  if (days === 0) return { label: "오늘", className: "bg-red-100 text-red-700" };
+  if (days <= 7) return { label: `D-${days}`, className: "bg-amber-100 text-amber-700" };
+  return { label: formatShortDate(dueDate), className: "bg-gray-100 text-gray-500" };
+}
+
 export function currentMonthKST(): string {
   const today = todayKST();
   return today.slice(0, 7);

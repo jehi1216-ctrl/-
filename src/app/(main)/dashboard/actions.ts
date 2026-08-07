@@ -133,6 +133,7 @@ export async function createLog(
   revalidatePath("/dashboard");
   revalidatePath("/journal");
   revalidatePath("/calendar");
+  revalidatePath("/weekly");
   revalidatePath(`/projects/${project_id}`);
   return { error: null, success: true, submittedAt: Date.now() };
 }
@@ -207,6 +208,7 @@ export async function updateLog(
   revalidatePath("/dashboard");
   revalidatePath("/journal");
   revalidatePath("/calendar");
+  revalidatePath("/weekly");
   revalidatePath(`/projects/${existing.project_id}`);
   return { error: null, success: true, submittedAt: Date.now() };
 }
@@ -231,6 +233,7 @@ export async function updateNextAction(
   revalidatePath("/dashboard");
   revalidatePath("/journal");
   revalidatePath("/calendar");
+  revalidatePath("/weekly");
   if (data?.project_id) revalidatePath(`/projects/${data.project_id}`);
 }
 
@@ -248,6 +251,7 @@ export async function closeLog(id: string, decision: string) {
   revalidatePath("/dashboard");
   revalidatePath("/journal");
   revalidatePath("/calendar");
+  revalidatePath("/weekly");
   if (data?.project_id) revalidatePath(`/projects/${data.project_id}`);
 }
 
@@ -262,6 +266,7 @@ export async function updateLogStatus(id: string, status: JournalStatus) {
   revalidatePath("/dashboard");
   revalidatePath("/journal");
   revalidatePath("/calendar");
+  revalidatePath("/weekly");
   if (data?.project_id) revalidatePath(`/projects/${data.project_id}`);
 }
 
@@ -276,5 +281,6 @@ export async function deleteLog(id: string) {
   revalidatePath("/dashboard");
   revalidatePath("/journal");
   revalidatePath("/calendar");
+  revalidatePath("/weekly");
   if (data?.project_id) revalidatePath(`/projects/${data.project_id}`);
 }
