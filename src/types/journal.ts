@@ -33,7 +33,7 @@ export const REVIEW_SUBOPTIONS = ["규모검토", "디자인검토", "견적검�
 export const DESIGN_SUBOPTIONS = ["법적근거", "CAD", "3D"] as const;
 export const PERMIT_DISCIPLINES = ["건축", "토목", "구조"] as const;
 export const PERMIT_STAGES = ["심의", "허가", "사용승인"] as const;
-export const CONSULT_SUBOPTIONS = ["구조", "토목", "MEP", "업체협의", "발주처"] as const;
+export const CONSULT_SUBOPTIONS = ["발주처", "구조", "토목", "MEP", "업체협의"] as const;
 export const NUMBERED_CATEGORIES = ["협의", "PT", "브랜딩"] as const;
 
 export interface NumberedEntry {
@@ -68,6 +68,21 @@ export interface WorkLog {
 }
 
 export const STATUS_OPTIONS: JournalStatus[] = ["todo", "waiting", "done"];
+
+// 아직 끝나지 않은 일지(미처리). 대시보드와 전체 목록의 모아보기가 같은 기준을 쓴다.
+export function isOpenLog(log: WorkLog): boolean {
+  return log.status === "todo" || log.status === "waiting";
+}
+
+// 마감일이 있는 항목을 급한 순으로 앞에 세우고, 날짜가 없는 항목은 뒤로 보낸다.
+export function compareOpenLogs(a: WorkLog, b: WorkLog): number {
+  const ad = a.next_action_date;
+  const bd = b.next_action_date;
+  if (ad && bd) return ad < bd ? -1 : ad > bd ? 1 : 0;
+  if (ad) return -1;
+  if (bd) return 1;
+  return 0;
+}
 
 export const STATUS_LABEL: Record<JournalStatus, string> = {
   todo: "내가 할 일",

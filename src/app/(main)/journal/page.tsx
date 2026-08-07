@@ -1,9 +1,12 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { formatDateLabel } from "@/lib/date";
+import { formatDateLabel, todayKST } from "@/lib/date";
 import JournalEntryCard from "@/components/JournalEntryCard";
 import ProjectFilterSelect from "@/components/ProjectFilterSelect";
+import OpenLogsSection from "@/components/OpenLogsSection";
 import {
+  compareOpenLogs,
+  isOpenLog,
   CATEGORY_OPTIONS,
   BUILD_CATEGORY_OPTIONS,
   REVIEW_SUBOPTIONS,
@@ -132,6 +135,9 @@ export default async function JournalPage({
 
   const grouped = groupByDate(allLogs);
 
+  // 모아보기는 별도 조회 없이 지금 보고 있는 목록에서 뽑는다 — 필터를 걸면 함께 좁혀진다.
+  const openLogs = allLogs.filter(isOpenLog).sort(compareOpenLogs);
+
   const logIds = allLogs.map((l) => l.id);
   const filesByLog = new Map<string, ProjectFile[]>();
   if (logIds.length > 0) {
@@ -249,6 +255,12 @@ export default async function JournalPage({
           ))}
         </div>
       )}
+
+      <OpenLogsSection
+        logs={openLogs}
+        projectNames={Object.fromEntries(projectNameById)}
+        today={todayKST()}
+      />
 
       {grouped.length === 0 ? (
         <p className="rounded-lg border border-dashed border-gray-300 p-6 text-center text-sm text-gray-400">
