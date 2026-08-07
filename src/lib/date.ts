@@ -18,6 +18,20 @@ export function formatDateLabel(dateStr: string): string {
   return `${y}년 ${m}월 ${d}일 (${WEEKDAYS[date.getUTCDay()]})`;
 }
 
+// from → to 사이의 일수. 미래면 양수, 과거면 음수.
+export function diffDays(from: string, to: string): number {
+  const [fy, fm, fd] = from.split("-").map(Number);
+  const [ty, tm, td] = to.split("-").map(Number);
+  return Math.round(
+    (Date.UTC(ty, tm - 1, td) - Date.UTC(fy, fm - 1, fd)) / 86400000
+  );
+}
+
+export function formatShortDate(dateStr: string): string {
+  const [, m, d] = dateStr.split("-").map(Number);
+  return `${m}/${d}`;
+}
+
 export function currentMonthKST(): string {
   const today = todayKST();
   return today.slice(0, 7);

@@ -4,6 +4,7 @@ import { todayKST, formatDateLabel } from "@/lib/date";
 import TodayEntry from "@/components/TodayEntry";
 import JournalEntryCard from "@/components/JournalEntryCard";
 import ScheduleSection from "@/components/ScheduleSection";
+import OpenLogsSection from "@/components/OpenLogsSection";
 import type { WorkLog } from "@/types/journal";
 import type { Project, ProjectFile, ChecklistItem, ProjectContact } from "@/types/project";
 import type { ScheduleItem } from "@/types/schedule";
@@ -65,6 +66,15 @@ export default async function DashboardPage() {
 
   const todayLogs = (logs ?? []) as WorkLog[];
 
+  // 날짜와 무관하게 아직 끝나지 않은 일지를 모두 모은다(마감일 빠른 순, 없으면 뒤로).
+  const { data: openLogs } = await supabase
+    .from("work_logs")
+    .select("*")
+    .eq("user_id", user!.id)
+    .in("status", ["todo", "waiting"])
+    .order("next_action_date", { ascending: true, nullsFirst: false })
+    .order("date", { ascending: false });
+
   const logIds = todayLogs.map((l) => l.id);
   const filesByLog = new Map<string, ProjectFile[]>();
   if (logIds.length > 0) {
@@ -86,6 +96,12 @@ export default async function DashboardPage() {
         <h1 className="text-lg font-semibold">{formatDateLabel(date)}</h1>
         <p className="text-sm text-gray-500">오늘 한 업무를 기록하세요.</p>
       </div>
+
+      <OpenLogsSection
+        logs={(openLogs ?? []) as WorkLog[]}
+        projectNames={Object.fromEntries(projectNameById)}
+        today={date}
+      />
 
       <ScheduleSection date={date} items={(scheduleItems ?? []) as ScheduleItem[]} />
 
