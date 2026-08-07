@@ -6,15 +6,19 @@ import {
   toggleScheduleItem,
   deleteScheduleItem,
 } from "@/app/(main)/dashboard/schedule-actions";
+import { projectColorClass } from "@/lib/projectColor";
 import type { ScheduleItem } from "@/types/schedule";
 
 export default function ScheduleSection({
   date,
   items,
+  projects,
 }: {
   date: string;
   items: ScheduleItem[];
+  projects: { id: string; name: string }[];
 }) {
+  const projectNames = new Map(projects.map((p) => [p.id, p.name]));
   const [isPending, startTransition] = useTransition();
 
   function handleToggle(item: ScheduleItem) {
@@ -47,6 +51,15 @@ export default function ScheduleSection({
                   onChange={() => handleToggle(item)}
                   disabled={isPending}
                 />
+                {item.project_id && (
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${projectColorClass(
+                      item.project_id
+                    )}`}
+                  >
+                    {projectNames.get(item.project_id) ?? "알 수 없는 현장"}
+                  </span>
+                )}
                 <span className={item.is_done ? "text-gray-400 line-through" : "text-gray-800"}>
                   {item.content}
                 </span>
@@ -77,6 +90,18 @@ export default function ScheduleSection({
           placeholder="할 일을 입력하세요"
           className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
         />
+        <select
+          name="project_id"
+          defaultValue=""
+          className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 sm:w-40"
+        >
+          <option value="">현장 없음</option>
+          {projects.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </select>
         <button
           type="submit"
           className="rounded-md bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"

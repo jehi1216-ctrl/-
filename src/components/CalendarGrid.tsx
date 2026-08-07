@@ -12,10 +12,12 @@ const MAX_CHIPS = 3;
 export default function CalendarGrid({
   weeks,
   entriesByDate,
+  projects,
   today,
 }: {
   weeks: CalendarCell[][];
   entriesByDate: Record<string, CalendarEntry[]>;
+  projects: { id: string; name: string }[];
   today: string;
 }) {
   // 칸이 좁아 내용이 잘리므로, 날짜를 누르면 아래에 그날 항목을 전문으로 펼치고
@@ -77,11 +79,13 @@ export default function CalendarGrid({
                         ) : (
                           <span
                             key={item.id}
-                            className={`truncate rounded border-l-4 border-l-gray-300 px-1 py-0.5 text-[10px] ${
-                              item.done
-                                ? "bg-gray-100 text-gray-400 line-through"
-                                : "bg-gray-100 text-gray-600"
-                            }`}
+                            className={`truncate rounded border-l-4 px-1 py-0.5 text-[10px] ${
+                              item.projectId
+                                ? `${projectColorClass(item.projectId)} ${projectBarClass(
+                                    item.projectId
+                                  )}`
+                                : "border-l-gray-300 bg-gray-100 text-gray-600"
+                            } ${item.done ? "line-through opacity-60" : ""}`}
                           >
                             {item.label}
                           </span>
@@ -106,6 +110,7 @@ export default function CalendarGrid({
           key={selected}
           date={selected}
           entries={entriesByDate[selected] ?? []}
+          projects={projects}
           onClose={() => setSelected(null)}
         />
       )}

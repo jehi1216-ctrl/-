@@ -43,12 +43,15 @@ export default async function CalendarPage({
         .gte("next_action_date", rangeStart)
         .lte("next_action_date", rangeEnd)
         .order("created_at", { ascending: true }),
-      supabase.from("projects").select("id, name").eq("user_id", user!.id),
+      supabase
+        .from("projects")
+        .select("id, name")
+        .eq("user_id", user!.id)
+        .order("created_at", { ascending: false }),
     ]);
 
-  const projectNames = new Map(
-    ((projects ?? []) as Pick<Project, "id" | "name">[]).map((p) => [p.id, p.name])
-  );
+  const projectList = (projects ?? []) as Pick<Project, "id" | "name">[];
+  const projectNames = new Map(projectList.map((p) => [p.id, p.name]));
 
   const itemsByDate = new Map<string, CalendarEntry[]>();
   function push(date: string, entry: CalendarEntry) {
@@ -57,17 +60,24 @@ export default async function CalendarPage({
     itemsByDate.set(date, bucket);
   }
 
+  // 색상 범례에는 이번 달에 실제로 항목이 있는 현장만 넣는다.
+  const legend = new Map<string, string>();
+
   for (const item of (scheduleItems ?? []) as ScheduleItem[]) {
+    const projectName = item.project_id
+      ? (projectNames.get(item.project_id) ?? "알 수 없는 현장")
+      : null;
+    if (item.project_id && projectName) legend.set(item.project_id, projectName);
     push(item.date, {
       kind: "schedule",
       id: item.id,
       label: item.content,
       done: item.is_done,
+      projectId: item.project_id,
+      projectName,
     });
   }
 
-  // 색상 범례에는 이번 달에 실제로 할 일이 있는 현장만 넣는다.
-  const legend = new Map<string, string>();
   for (const log of (todoLogs ?? []) as WorkLog[]) {
     if (!log.next_action_date || !log.next_action) continue;
     const projectName = projectNames.get(log.project_id) ?? "알 수 없는 현장";
@@ -135,6 +145,7 @@ export default async function CalendarPage({
       <CalendarGrid
         weeks={weeks}
         entriesByDate={Object.fromEntries(itemsByDate)}
+        projects={projectList}
         today={todayKST()}
       />
     </div>

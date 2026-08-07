@@ -104,7 +104,11 @@ export default async function DashboardPage() {
         today={date}
       />
 
-      <ScheduleSection date={date} items={(scheduleItems ?? []) as ScheduleItem[]} />
+      <ScheduleSection
+        date={date}
+        items={(scheduleItems ?? []) as ScheduleItem[]}
+        projects={projectList}
+      />
 
       {projectList.length === 0 ? (
         <p className="rounded-lg border border-dashed border-gray-300 p-6 text-center text-sm text-gray-400">

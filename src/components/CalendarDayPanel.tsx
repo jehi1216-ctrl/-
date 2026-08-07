@@ -18,6 +18,8 @@ import { projectColorClass, projectBarClass } from "@/lib/projectColor";
 import type { CalendarEntry } from "@/types/calendar";
 import CloseLogPrompt from "./CloseLogPrompt";
 
+type Project = { id: string; name: string };
+
 const INPUT_CLASS =
   "w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500";
 
@@ -162,18 +164,21 @@ function TodoRow({
 function ScheduleRow({
   entry,
   date,
+  projects,
 }: {
   entry: Extract<CalendarEntry, { kind: "schedule" }>;
   date: string;
+  projects: Project[];
 }) {
   const [isPending, startTransition] = useTransition();
   const [editing, setEditing] = useState(false);
   const [content, setContent] = useState(entry.label);
   const [itemDate, setItemDate] = useState(date);
+  const [projectId, setProjectId] = useState(entry.projectId ?? "");
 
   function save() {
     startTransition(async () => {
-      await updateScheduleItem(entry.id, content, itemDate);
+      await updateScheduleItem(entry.id, content, itemDate, projectId || null);
       setEditing(false);
     });
   }
@@ -181,14 +186,15 @@ function ScheduleRow({
   function cancel() {
     setContent(entry.label);
     setItemDate(date);
+    setProjectId(entry.projectId ?? "");
     setEditing(false);
   }
 
   return (
     <li
-      className={`rounded-md border border-gray-100 border-l-4 border-l-gray-300 p-2.5 transition-opacity ${
-        isPending ? "opacity-50" : ""
-      }`}
+      className={`rounded-md border border-gray-100 border-l-4 p-2.5 transition-opacity ${
+        entry.projectId ? projectBarClass(entry.projectId) : "border-l-gray-300"
+      } ${isPending ? "opacity-50" : ""}`}
     >
       {editing ? (
         <div className="space-y-1.5">
@@ -199,12 +205,26 @@ function ScheduleRow({
             autoFocus
             className={INPUT_CLASS}
           />
-          <input
-            type="date"
-            value={itemDate}
-            onChange={(e) => setItemDate(e.target.value)}
-            className="rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              type="date"
+              value={itemDate}
+              onChange={(e) => setItemDate(e.target.value)}
+              className="rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+            />
+            <select
+              value={projectId}
+              onChange={(e) => setProjectId(e.target.value)}
+              className="rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+            >
+              <option value="">현장 없음</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </div>
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -226,7 +246,7 @@ function ScheduleRow({
         </div>
       ) : (
         <div className="flex items-start justify-between gap-2">
-          <label className="flex flex-1 items-start gap-2">
+          <label className="flex min-w-0 flex-1 items-start gap-2">
             <input
               type="checkbox"
               checked={entry.done}
@@ -238,12 +258,24 @@ function ScheduleRow({
               disabled={isPending}
               className="mt-0.5"
             />
-            <span
-              className={`whitespace-pre-wrap break-words text-sm ${
-                entry.done ? "text-gray-400 line-through" : "text-gray-800"
-              }`}
-            >
-              {entry.label}
+            <span className="min-w-0">
+              {entry.projectId && entry.projectName && (
+                <Link
+                  href={`/projects/${entry.projectId}`}
+                  className={`mr-1.5 inline-block rounded-full px-2 py-0.5 align-middle text-[11px] font-medium ${projectColorClass(
+                    entry.projectId
+                  )}`}
+                >
+                  {entry.projectName}
+                </Link>
+              )}
+              <span
+                className={`whitespace-pre-wrap break-words align-middle text-sm ${
+                  entry.done ? "text-gray-400 line-through" : "text-gray-800"
+                }`}
+              >
+                {entry.label}
+              </span>
             </span>
           </label>
           <div className="flex flex-shrink-0 items-center gap-3">
@@ -277,10 +309,12 @@ function ScheduleRow({
 export default function CalendarDayPanel({
   date,
   entries,
+  projects,
   onClose,
 }: {
   date: string;
   entries: CalendarEntry[];
+  projects: Project[];
   onClose: () => void;
 }) {
   return (
@@ -309,7 +343,12 @@ export default function CalendarDayPanel({
             entry.kind === "todo" ? (
               <TodoRow key={entry.id} entry={entry} date={date} />
             ) : (
-              <ScheduleRow key={entry.id} entry={entry} date={date} />
+              <ScheduleRow
+                key={entry.id}
+                entry={entry}
+                date={date}
+                projects={projects}
+              />
             )
           )}
         </ul>
@@ -324,6 +363,18 @@ export default function CalendarDayPanel({
           placeholder="이 날에 일정 추가"
           className={INPUT_CLASS}
         />
+        <select
+          name="project_id"
+          defaultValue=""
+          className="rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 sm:w-44"
+        >
+          <option value="">현장 없음</option>
+          {projects.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </select>
         <button
           type="submit"
           className="rounded-md bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
