@@ -32,14 +32,12 @@ export default function JournalForm({
   projectId,
   checklistsByProject = {},
   contactsByProject = {},
-  showChecklist = true,
   lockedLogType,
 }: {
   date: string;
   projectId: string;
   checklistsByProject?: Record<string, ChecklistItem[]>;
   contactsByProject?: Record<string, ProjectContact[]>;
-  showChecklist?: boolean;
   lockedLogType?: LogType;
 }) {
   const [state, formAction] = useActionState<FormState, FormData>(
@@ -128,7 +126,7 @@ export default function JournalForm({
           className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
         />
 
-        {showChecklist && projectId && (
+        {projectId && (
           <div className="mt-1.5">
             <button
               type="button"

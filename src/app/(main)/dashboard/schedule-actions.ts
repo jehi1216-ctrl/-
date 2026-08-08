@@ -3,6 +3,16 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
+// 일정은 프로젝트 상세의 캘린더에도 나오므로, 현장이 붙어 있으면 그 페이지도 같이 새로 고친다.
+function revalidateAll(...projectIds: (string | null | undefined)[]) {
+  revalidatePath("/dashboard");
+  revalidatePath("/calendar");
+  revalidatePath("/weekly");
+  for (const projectId of new Set(projectIds.filter(Boolean))) {
+    revalidatePath(`/projects/${projectId}`);
+  }
+}
+
 export async function addScheduleItem(formData: FormData) {
   const supabase = await createClient();
   const {
@@ -23,17 +33,18 @@ export async function addScheduleItem(formData: FormData) {
     project_id: project_id || null,
   });
 
-  revalidatePath("/dashboard");
-  revalidatePath("/calendar");
-  revalidatePath("/weekly");
+  revalidateAll(project_id);
 }
 
 export async function toggleScheduleItem(id: string, isDone: boolean) {
   const supabase = await createClient();
-  await supabase.from("schedule_items").update({ is_done: isDone }).eq("id", id);
-  revalidatePath("/dashboard");
-  revalidatePath("/calendar");
-  revalidatePath("/weekly");
+  const { data } = await supabase
+    .from("schedule_items")
+    .update({ is_done: isDone })
+    .eq("id", id)
+    .select("project_id")
+    .single();
+  revalidateAll(data?.project_id);
 }
 
 // 캘린더에서 일정 내용/날짜/현장을 바로 고칠 때 쓴다. 날짜를 바꾸면 그 날짜 칸으로 옮겨간다.
@@ -47,19 +58,26 @@ export async function updateScheduleItem(
   if (!trimmed || !date) return;
 
   const supabase = await createClient();
+  // 현장을 옮기면 떠나온 프로젝트 화면도 낡는다. 바꾸기 전 현장을 먼저 읽어 둘 다 새로 고친다.
+  const { data: before } = await supabase
+    .from("schedule_items")
+    .select("project_id")
+    .eq("id", id)
+    .single();
   await supabase
     .from("schedule_items")
     .update({ content: trimmed, date, project_id: projectId || null })
     .eq("id", id);
-  revalidatePath("/dashboard");
-  revalidatePath("/calendar");
-  revalidatePath("/weekly");
+  revalidateAll(before?.project_id, projectId);
 }
 
 export async function deleteScheduleItem(id: string) {
   const supabase = await createClient();
-  await supabase.from("schedule_items").delete().eq("id", id);
-  revalidatePath("/dashboard");
-  revalidatePath("/calendar");
-  revalidatePath("/weekly");
+  const { data } = await supabase
+    .from("schedule_items")
+    .delete()
+    .eq("id", id)
+    .select("project_id")
+    .single();
+  revalidateAll(data?.project_id);
 }

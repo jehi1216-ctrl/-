@@ -161,7 +161,8 @@ function TodoRow({
   );
 }
 
-function ScheduleRow({
+// 프로젝트 상세의 캘린더(ProjectCalendarDayPanel)도 같은 일정 편집 UI를 쓴다.
+export function ScheduleRow({
   entry,
   date,
   projects,
