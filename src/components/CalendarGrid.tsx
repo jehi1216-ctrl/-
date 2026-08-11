@@ -69,7 +69,6 @@ export default function CalendarGrid({
                     <div className="flex w-full flex-col gap-0.5">
                       {dayItems.slice(0, MAX_CHIPS).map((item) =>
                         item.kind === "todo" || item.kind === "decision" ? (
-                          // 둘 다 현장 색을 쓰므로, 결정만 앞에 말머리를 붙여 구분한다.
                           <span
                             key={item.id}
                             className={`truncate rounded border-l-4 px-1 py-0.5 text-[10px] font-medium ${projectColorClass(
@@ -80,9 +79,6 @@ export default function CalendarGrid({
                               <span className="font-semibold tabular-nums">
                                 {formatTime(item.time)}{" "}
                               </span>
-                            )}
-                            {item.kind === "decision" && (
-                              <span className="font-semibold">결정 </span>
                             )}
                             {item.label}
                           </span>

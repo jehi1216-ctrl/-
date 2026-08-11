@@ -44,10 +44,11 @@ const NAV_LINK_CLASS = "rounded-md px-3 py-1.5 text-sm text-gray-600 hover:bg-gr
 // 칸이 좁아 배지를 넣을 자리가 없으므로 상태 색(보라) 점 하나로 표시한다.
 const WAITING_DOT_CLASS = "h-1.5 w-1.5 shrink-0 rounded-full bg-violet-500";
 
+// 칸에는 시각과 내용만 넣는다. 종류는 CHIP_CLASS 색과 범례가 이미 말해주므로
+// '기록/할 일/결정' 같은 말머리는 좁은 칸에서 내용만 밀어낸다.
 interface DayChip {
   id: string;
   kind: keyof typeof CHIP_CLASS;
-  prefix: string;
   time: string; // HH:MM. 빈 문자열이면 시간 없는 항목
   text: string;
   muted: boolean;
@@ -135,7 +136,6 @@ export default function ProjectCalendar({
         ...bucket.logs.map((log) => ({
           id: log.id,
           kind: "log" as const,
-          prefix: log.categories[0] ?? "",
           // 기록은 '그날 적었다'는 뜻이라 시각이 없다.
           time: "",
           text: log.content,
@@ -145,7 +145,6 @@ export default function ProjectCalendar({
         ...bucket.todos.map((log) => ({
           id: log.id,
           kind: "todo" as const,
-          prefix: "할 일",
           time: formatTime(log.next_action_time),
           text: log.next_action ?? "",
           muted: false,
@@ -154,7 +153,6 @@ export default function ProjectCalendar({
         ...bucket.decisions.map(({ log, content, time }) => ({
           id: log.id,
           kind: "decision" as const,
-          prefix: "결정",
           time,
           // 그날 내용 → 결정사항 → 기록 본문 순으로 칸을 채운다.
           text: content || log.decision || log.content,
@@ -164,7 +162,6 @@ export default function ProjectCalendar({
         ...bucket.schedules.map((item) => ({
           id: item.id,
           kind: "schedule" as const,
-          prefix: "",
           time: formatTime(item.start_time),
           text: item.content,
           muted: item.is_done,
@@ -319,9 +316,6 @@ export default function ProjectCalendar({
                               <span className="font-semibold tabular-nums">
                                 {chip.time}{" "}
                               </span>
-                            )}
-                            {chip.prefix && (
-                              <span className="font-semibold">{chip.prefix} </span>
                             )}
                             {chip.text}
                           </span>
