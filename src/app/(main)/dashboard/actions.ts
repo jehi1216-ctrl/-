@@ -6,6 +6,8 @@ import { todayKST } from "@/lib/date";
 import {
   NUMBERED_CATEGORIES,
   type CategoryDetails,
+  parseDecisionDates,
+  type DecisionDate,
   type JournalStatus,
   type LogType,
 } from "@/types/journal";
@@ -89,7 +91,18 @@ export async function createLog(
   const status = String(formData.get("status") ?? "todo") as JournalStatus;
   const next_action = String(formData.get("next_action") ?? "").trim();
   const next_action_date = String(formData.get("next_action_date") ?? "").trim();
+  const next_action_time = String(formData.get("next_action_time") ?? "").trim();
   const decision = String(formData.get("decision") ?? "").trim();
+  // 줄마다 {date, content} JSON 한 덩어리로 들어온다. 손상된 값은 버리고 나머지를 살린다.
+  const decision_dates = parseDecisionDates(
+    formData.getAll("decision_dates").flatMap((raw) => {
+      try {
+        return [JSON.parse(String(raw))];
+      } catch {
+        return [];
+      }
+    })
+  );
   const date = String(formData.get("date") ?? todayKST());
   const log_type = String(formData.get("log_type") ?? "design") as LogType;
 
@@ -123,7 +136,10 @@ export async function createLog(
     status,
     next_action: status === "todo" ? next_action || null : null,
     next_action_date: status === "todo" ? next_action_date || null : null,
+    next_action_time: status === "todo" ? next_action_time || null : null,
     decision: status === "done" ? decision || null : null,
+    decision_dates:
+      status === "done" && decision_dates.length > 0 ? decision_dates : null,
   });
 
   if (error) {
@@ -161,7 +177,18 @@ export async function updateLog(
   const status = String(formData.get("status") ?? "todo") as JournalStatus;
   const next_action = String(formData.get("next_action") ?? "").trim();
   const next_action_date = String(formData.get("next_action_date") ?? "").trim();
+  const next_action_time = String(formData.get("next_action_time") ?? "").trim();
   const decision = String(formData.get("decision") ?? "").trim();
+  // 줄마다 {date, content} JSON 한 덩어리로 들어온다. 손상된 값은 버리고 나머지를 살린다.
+  const decision_dates = parseDecisionDates(
+    formData.getAll("decision_dates").flatMap((raw) => {
+      try {
+        return [JSON.parse(String(raw))];
+      } catch {
+        return [];
+      }
+    })
+  );
 
   if (!content) {
     return { error: "내용을 입력해주세요.", success: false };
@@ -197,7 +224,10 @@ export async function updateLog(
       status,
       next_action: status === "todo" ? next_action || null : null,
       next_action_date: status === "todo" ? next_action_date || null : null,
+      next_action_time: status === "todo" ? next_action_time || null : null,
       decision: status === "done" ? decision || null : null,
+      decision_dates:
+        status === "done" && decision_dates.length > 0 ? decision_dates : null,
     })
     .eq("id", id);
 
@@ -218,7 +248,8 @@ export async function updateLog(
 export async function updateNextAction(
   id: string,
   nextAction: string,
-  nextActionDate: string
+  nextActionDate: string,
+  nextActionTime = ""
 ) {
   const trimmed = nextAction.trim();
   if (!trimmed) return;
@@ -226,7 +257,12 @@ export async function updateNextAction(
   const supabase = await createClient();
   const { data } = await supabase
     .from("work_logs")
-    .update({ next_action: trimmed, next_action_date: nextActionDate || null })
+    .update({
+      next_action: trimmed,
+      next_action_date: nextActionDate || null,
+      // 날짜를 비우면 시각만 남을 자리가 없다. 같이 털어낸다.
+      next_action_time: nextActionDate ? nextActionTime || null : null,
+    })
     .eq("id", id)
     .select("project_id")
     .single();
@@ -237,14 +273,27 @@ export async function updateNextAction(
   if (data?.project_id) revalidatePath(`/projects/${data.project_id}`);
 }
 
-// 종료 전용. 결정사항을 비워서 부르면 '그냥 종료'이고, 이때 기존 결정사항은
+// 종료 전용. 결정사항이나 협의된 날짜를 비워서 부르면 '그냥 종료'이고, 이때 기존 값은
 // 지우지 않는다(상태를 되돌렸다가 다시 종료해도 적어둔 내용이 살아남는다).
-export async function closeLog(id: string, decision: string) {
+// 그래서 적어둔 값을 지우는 건 여기가 아니라 수정 폼(updateLog)에서만 된다.
+export async function closeLog(
+  id: string,
+  decision: string,
+  decisionDates: DecisionDate[] = []
+) {
   const supabase = await createClient();
   const trimmed = decision.trim();
+  const dates = parseDecisionDates(decisionDates);
+  const patch: {
+    status: JournalStatus;
+    decision?: string;
+    decision_dates?: DecisionDate[];
+  } = { status: "done" };
+  if (trimmed) patch.decision = trimmed;
+  if (dates.length > 0) patch.decision_dates = dates;
   const { data } = await supabase
     .from("work_logs")
-    .update(trimmed ? { status: "done", decision: trimmed } : { status: "done" })
+    .update(patch)
     .eq("id", id)
     .select("project_id")
     .single();

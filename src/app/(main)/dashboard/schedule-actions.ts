@@ -24,11 +24,14 @@ export async function addScheduleItem(formData: FormData) {
   const date = String(formData.get("date") ?? "").trim();
   const content = String(formData.get("content") ?? "").trim();
   const project_id = String(formData.get("project_id") ?? "").trim();
+  // 시각은 선택이다. 안 고르면 null로 두고 시간 없는 일정으로 남는다.
+  const start_time = String(formData.get("start_time") ?? "").trim();
   if (!date || !content) return;
 
   await supabase.from("schedule_items").insert({
     user_id: user.id,
     date,
+    start_time: start_time || null,
     content,
     project_id: project_id || null,
   });
@@ -52,7 +55,8 @@ export async function updateScheduleItem(
   id: string,
   content: string,
   date: string,
-  projectId: string | null
+  projectId: string | null,
+  startTime = ""
 ) {
   const trimmed = content.trim();
   if (!trimmed || !date) return;
@@ -66,7 +70,12 @@ export async function updateScheduleItem(
     .single();
   await supabase
     .from("schedule_items")
-    .update({ content: trimmed, date, project_id: projectId || null })
+    .update({
+      content: trimmed,
+      date,
+      start_time: startTime || null,
+      project_id: projectId || null,
+    })
     .eq("id", id);
   revalidateAll(before?.project_id, projectId);
 }

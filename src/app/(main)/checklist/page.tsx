@@ -30,7 +30,7 @@ function CountSummary({ items }: { items: ChecklistItem[] }) {
   }
 
   if (items.length === 0) {
-    return <p className="text-sm text-gray-400">등록된 할 일이 없어요.</p>;
+    return <p className="text-sm text-gray-400">등록된 항목이 없어요.</p>;
   }
 
   return (
@@ -159,7 +159,7 @@ export default async function ChecklistPage({
       <div className="space-y-6">
         <div>
           <h1 className="text-lg font-semibold">체크리스트</h1>
-          <p className="text-sm text-gray-500">현장을 골라 할 일을 확인하세요.</p>
+          <p className="text-sm text-gray-500">현장을 골라 체크리스트를 확인하세요.</p>
         </div>
 
         {(["design", "build"] as const).map((type: LogType) => {
@@ -250,7 +250,7 @@ export default async function ChecklistPage({
             {PHASE_LABEL[activeProject.phase]}
           </span>
         </div>
-        <p className="text-sm text-gray-500">폴더를 골라 할 일을 확인하세요.</p>
+        <p className="text-sm text-gray-500">폴더를 골라 항목을 확인하세요.</p>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

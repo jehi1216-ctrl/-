@@ -8,6 +8,8 @@ import type { WorkLog } from "@/types/journal";
 import CategoryFieldset from "./CategoryFieldset";
 import BuildCategoryFieldset from "./BuildCategoryFieldset";
 import StatusFieldset from "./StatusFieldset";
+import { parseDecisionDates } from "@/types/journal";
+import { formatTime } from "@/lib/date";
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -106,7 +108,9 @@ export default function EditLogForm({
         defaultStatus={log.status}
         defaultNextAction={log.next_action ?? ""}
         defaultNextActionDate={log.next_action_date ?? ""}
+        defaultNextActionTime={formatTime(log.next_action_time)}
         defaultDecision={log.decision ?? ""}
+        defaultDecisionDates={parseDecisionDates(log.decision_dates)}
       />
 
       <div className="flex items-center gap-3">

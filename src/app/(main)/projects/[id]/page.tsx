@@ -46,6 +46,7 @@ export default async function ProjectDetailPage({
     { data: files },
     { data: monthLogs },
     { data: monthTodos },
+    { data: monthDecisions },
     { data: monthSchedules },
     { data: logDates },
   ] = await Promise.all([
@@ -75,6 +76,16 @@ export default async function ProjectDetailPage({
       .gte("next_action_date", rangeStart)
       .lte("next_action_date", rangeEnd)
       .order("created_at", { ascending: true }),
+    // 종료된 일지라도 '그날로 협의됨'이 적혀 있으면 달력에 남아야 한다.
+    // decision_dates는 jsonb라 날짜 범위로 자를 수가 없다. 이 프로젝트에서 값이 있는
+    // 것만 받아 ProjectCalendar가 이 달에 걸리는 날짜를 골라낸다.
+    supabase
+      .from("work_logs")
+      .select("*")
+      .eq("project_id", id)
+      .eq("status", "done")
+      .not("decision_dates", "is", null)
+      .order("created_at", { ascending: true }),
     supabase
       .from("schedule_items")
       .select("*")
@@ -93,11 +104,12 @@ export default async function ProjectDetailPage({
 
   const logs = (monthLogs ?? []) as WorkLog[];
   const todos = (monthTodos ?? []) as WorkLog[];
+  const decisions = (monthDecisions ?? []) as WorkLog[];
   const schedules = (monthSchedules ?? []) as ScheduleItem[];
   const allLogDates = (logDates ?? []) as { date: string; status: JournalStatus }[];
   const waitingCount = allLogDates.filter((l) => l.status === "waiting").length;
 
-  const logIds = [...new Set([...logs, ...todos].map((l) => l.id))];
+  const logIds = [...new Set([...logs, ...todos, ...decisions].map((l) => l.id))];
   const filesByLog: Record<string, ProjectFile[]> = {};
   if (logIds.length > 0) {
     const { data: logFiles } = await supabase
@@ -112,14 +124,6 @@ export default async function ProjectDetailPage({
 
   return (
     <div className="space-y-6">
-      <ProjectInfoCard project={p} />
-      <ProgressNotes projectId={p.id} notes={p.progress_notes} />
-      <ProjectContacts projectId={p.id} contacts={(contacts ?? []) as ProjectContact[]} />
-      <ProjectFiles
-        projectId={p.id}
-        files={(files ?? []) as ProjectFile[]}
-        title="문서함 (도면, 계약서 등)"
-      />
       <ProjectCalendar
         projectId={p.id}
         projectName={p.name}
@@ -128,12 +132,21 @@ export default async function ProjectDetailPage({
         today={todayKST()}
         logs={logs}
         todos={todos}
+        decisions={decisions}
         schedules={schedules}
         filesByLog={filesByLog}
         totalLogs={allLogDates.length}
         waitingCount={waitingCount}
         firstLogMonth={allLogDates[0]?.date.slice(0, 7) ?? null}
         lastLogMonth={allLogDates[allLogDates.length - 1]?.date.slice(0, 7) ?? null}
+      />
+      <ProjectInfoCard project={p} />
+      <ProgressNotes projectId={p.id} notes={p.progress_notes} />
+      <ProjectContacts projectId={p.id} contacts={(contacts ?? []) as ProjectContact[]} />
+      <ProjectFiles
+        projectId={p.id}
+        files={(files ?? []) as ProjectFile[]}
+        title="문서함 (도면, 계약서 등)"
       />
     </div>
   );

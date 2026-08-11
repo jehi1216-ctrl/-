@@ -82,7 +82,7 @@ export async function addChecklistItem(
 
   const content = String(formData.get("content") ?? "").trim();
   if (!content) {
-    return { error: "할 일 내용을 입력해주세요.", success: false };
+    return { error: "항목 내용을 입력해주세요.", success: false };
   }
 
   const assigneeChoice = String(formData.get("assignee_contact_id") ?? "").trim();

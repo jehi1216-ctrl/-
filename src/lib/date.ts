@@ -127,3 +127,22 @@ export function buildMonthGrid(yearMonth: string): CalendarCell[][] {
   }
   return weeks;
 }
+
+// DB의 time 컬럼은 "HH:MM:SS"로 오고 <input type="time">은 "HH:MM"을 준다.
+// 화면과 입력값을 한 모양(HH:MM)으로 맞춘다.
+export function formatTime(value: string | null | undefined): string {
+  return value ? value.slice(0, 5) : "";
+}
+
+// 같은 날 안에서의 정렬. 시간이 없는 항목은 '하루 종일'로 보고 뒤로 보낸다.
+export function compareTimes(
+  a: string | null | undefined,
+  b: string | null | undefined
+): number {
+  const at = formatTime(a);
+  const bt = formatTime(b);
+  if (at && bt) return at < bt ? -1 : at > bt ? 1 : 0;
+  if (at) return -1;
+  if (bt) return 1;
+  return 0;
+}

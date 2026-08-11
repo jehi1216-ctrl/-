@@ -1,7 +1,7 @@
 "use client";
 
 import { addScheduleItem } from "@/app/(main)/dashboard/schedule-actions";
-import { formatDateLabel } from "@/lib/date";
+import { formatDateLabel, formatTime, compareTimes } from "@/lib/date";
 import type { WorkLog } from "@/types/journal";
 import type { ScheduleItem } from "@/types/schedule";
 import type { ProjectFile } from "@/types/project";
@@ -16,6 +16,7 @@ export default function ProjectCalendarDayPanel({
   projectName,
   logs,
   todos,
+  decisions,
   schedules,
   filesByLog,
   onClose,
@@ -25,11 +26,13 @@ export default function ProjectCalendarDayPanel({
   projectName: string;
   logs: WorkLog[];
   todos: WorkLog[];
+  decisions: { log: WorkLog; content: string; time: string }[];
   schedules: ScheduleItem[];
   filesByLog: Record<string, ProjectFile[]>;
   onClose: () => void;
 }) {
-  const total = logs.length + todos.length + schedules.length;
+  const total =
+    logs.length + todos.length + decisions.length + schedules.length;
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
@@ -70,11 +73,38 @@ export default function ProjectCalendarDayPanel({
         </section>
       )}
 
+      {decisions.length > 0 && (
+        <section className="mb-4">
+          {/* 기록일이 아니라 '종료하며 협의된 날짜'가 이 날인 일지. */}
+          <h4 className={SECTION_TITLE_CLASS}>
+            이 날로 협의된 건 {decisions.length}건
+          </h4>
+          <ul className="space-y-3">
+            {decisions.map(({ log, content, time }) => (
+              <li key={log.id}>
+                {/* 그날 무엇이 있는지가 먼저다. 일지 전문은 그 아래 카드로 붙는다. */}
+                {(time || content) && (
+                  <p className="mb-1 break-words rounded-md bg-emerald-50 px-2 py-1 text-sm font-medium text-emerald-900">
+                    {time && <span className="mr-1.5 tabular-nums">{time}</span>}
+                    {content}
+                  </p>
+                )}
+                <ul>
+                  <JournalEntryCard log={log} files={filesByLog[log.id]} />
+                </ul>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       <section>
         <h4 className={SECTION_TITLE_CLASS}>일정</h4>
         {schedules.length > 0 && (
           <ul className="mb-3 space-y-2">
-            {schedules.map((item) => (
+            {[...schedules]
+              .sort((a, b) => compareTimes(a.start_time, b.start_time))
+              .map((item) => (
               <ScheduleRow
                 key={item.id}
                 date={date}
@@ -85,18 +115,25 @@ export default function ProjectCalendarDayPanel({
                   kind: "schedule",
                   id: item.id,
                   label: item.content,
+                  time: formatTime(item.start_time) || null,
                   done: item.is_done,
                   projectId: item.project_id,
                   // 이 프로젝트 화면이라 현장 배지는 자기 자신을 가리키는 군더더기다.
                   projectName: null,
                 }}
               />
-            ))}
+              ))}
           </ul>
         )}
         <form action={addScheduleItem} className="flex flex-col gap-2 sm:flex-row">
           <input type="hidden" name="date" value={date} />
           <input type="hidden" name="project_id" value={projectId} />
+          <input
+            type="time"
+            name="start_time"
+            aria-label="시각 (선택)"
+            className="rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 sm:w-28"
+          />
           <input
             name="content"
             required

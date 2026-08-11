@@ -111,7 +111,7 @@ export default function ProjectChecklist({
               name="content"
               required
               defaultValue={item.content}
-              placeholder="할 일 *"
+              placeholder="항목 내용 *"
               className={`col-span-2 ${inputClass} sm:col-span-4`}
             />
             <input type="hidden" name="prev_assignee" value={item.assignee ?? ""} />
@@ -267,7 +267,7 @@ export default function ProjectChecklist({
 
       {sorted.length === 0 ? (
         <p className={`text-gray-400 ${compact ? "mb-2 text-xs" : "mb-3 text-sm"}`}>
-          등록된 할 일이 없어요.
+          등록된 항목이 없어요.
         </p>
       ) : assigneeGroups ? (
         <div className="mb-3 space-y-3">
@@ -292,7 +292,7 @@ export default function ProjectChecklist({
 
       <form ref={formRef} action={formAction} className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         <input type="hidden" name="group_id" value={groupId ?? ""} />
-        <input name="content" required placeholder="할 일 *" className={`col-span-2 ${inputClass}`} />
+        <input name="content" required placeholder="항목 내용 *" className={`col-span-2 ${inputClass}`} />
         <select name="assignee_contact_id" defaultValue="" className={inputClass}>
           <option value="">담당자 없음</option>
           <option value={ME_OPTION_VALUE}>{ME_ASSIGNEE}</option>
@@ -315,7 +315,7 @@ export default function ProjectChecklist({
             compact ? "px-2 py-1 text-xs" : "px-3 py-1.5 text-sm"
           }`}
         >
-          할 일 추가
+          항목 추가
         </button>
       </form>
     </>

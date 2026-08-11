@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import DecisionDatesField from "./DecisionDatesField";
+import type { DecisionDate } from "@/types/journal";
 import {
   STATUS_OPTIONS,
   STATUS_LABEL,
@@ -12,14 +14,21 @@ export default function StatusFieldset({
   defaultStatus = "todo",
   defaultNextAction = "",
   defaultNextActionDate = "",
+  defaultNextActionTime = "",
   defaultDecision = "",
+  defaultDecisionDates = [],
 }: {
   defaultStatus?: JournalStatus;
   defaultNextAction?: string;
   defaultNextActionDate?: string;
+  defaultNextActionTime?: string;
   defaultDecision?: string;
+  defaultDecisionDates?: DecisionDate[];
 }) {
   const [status, setStatus] = useState<JournalStatus>(defaultStatus);
+  // 상태를 종료가 아닌 값으로 바꿔도 적어둔 날짜는 들고 있는다 — 되돌리면 그대로 살아난다.
+  const [decisionDates, setDecisionDates] =
+    useState<DecisionDate[]>(defaultDecisionDates);
 
   return (
     <fieldset>
@@ -64,6 +73,14 @@ export default function StatusFieldset({
               defaultValue={defaultNextActionDate}
               className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
             />
+            {/* 시각은 선택. 날짜를 안 넣으면 서버에서 같이 버려진다. */}
+            <input
+              type="time"
+              name="next_action_time"
+              defaultValue={defaultNextActionTime}
+              aria-label="마감 시각 (선택)"
+              className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+            />
             <span className="text-xs text-gray-400">
               선택 — 넣으면 캘린더에 표시됩니다
             </span>
@@ -80,8 +97,18 @@ export default function StatusFieldset({
             placeholder="종료하면서 남길 결정사항 (선택)"
             className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
           />
+          {/* 마감(next_action_date)과는 다른 뜻이다 — 이건 '그날로 협의됐다'는 날짜다.
+              여러 날에 걸쳐 협의되는 경우가 있어 날짜를 여러 개 담을 수 있다. */}
+          <div className="mt-2">
+            <p className="mb-1 text-sm text-gray-500">협의된 날짜</p>
+            <DecisionDatesField
+              entries={decisionDates}
+              onChange={setDecisionDates}
+              name="decision_dates"
+            />
+          </div>
           <p className="mt-1 text-xs text-gray-400">
-            비워두면 결정사항 없이 종료됩니다.
+            둘 다 비워두면 그냥 종료됩니다.
           </p>
         </div>
       )}

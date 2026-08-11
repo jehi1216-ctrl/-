@@ -2,8 +2,18 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { currentMonthKST, shiftMonth, type CalendarCell } from "@/lib/date";
-import { STATUS_BADGE_CLASS, type WorkLog } from "@/types/journal";
+import {
+  currentMonthKST,
+  shiftMonth,
+  formatTime,
+  compareTimes,
+  type CalendarCell,
+} from "@/lib/date";
+import {
+  STATUS_BADGE_CLASS,
+  parseDecisionDates,
+  type WorkLog,
+} from "@/types/journal";
 import type { ScheduleItem } from "@/types/schedule";
 import type { ProjectFile } from "@/types/project";
 import ProjectCalendarDayPanel from "./ProjectCalendarDayPanel";
@@ -16,12 +26,15 @@ const MAX_CHIPS = 3;
 const CHIP_CLASS = {
   log: "border-l-brand-500 bg-brand-50 text-brand-800",
   todo: "border-l-amber-500 bg-amber-100 text-amber-900",
+  // 종료(STATUS_BADGE_CLASS.done)와 같은 초록 계열을 써서 상태 색과 어긋나지 않게 한다.
+  decision: "border-l-emerald-500 bg-emerald-100 text-emerald-900",
   schedule: "border-l-gray-400 bg-gray-100 text-gray-600",
 } as const;
 
 const LEGEND = [
   { kind: "log", label: "기록" },
   { kind: "todo", label: "할 일 마감" },
+  { kind: "decision", label: "협의된 날짜" },
   { kind: "schedule", label: "일정" },
 ] as const;
 
@@ -35,6 +48,7 @@ interface DayChip {
   id: string;
   kind: keyof typeof CHIP_CLASS;
   prefix: string;
+  time: string; // HH:MM. 빈 문자열이면 시간 없는 항목
   text: string;
   muted: boolean;
   waiting: boolean;
@@ -43,6 +57,8 @@ interface DayChip {
 interface DayBucket {
   logs: WorkLog[];
   todos: WorkLog[];
+  // 날짜마다 그날 내용·시각이 달라 일지와 함께 들고 다닌다.
+  decisions: { log: WorkLog; content: string; time: string }[];
   schedules: ScheduleItem[];
 }
 
@@ -54,6 +70,7 @@ export default function ProjectCalendar({
   today,
   logs,
   todos,
+  decisions,
   schedules,
   filesByLog,
   totalLogs,
@@ -68,6 +85,7 @@ export default function ProjectCalendar({
   today: string;
   logs: WorkLog[]; // 이 달 그리드 범위에 기록일(date)이 걸린 일지
   todos: WorkLog[]; // 마감일(next_action_date)이 걸린 '내가 할 일' 일지
+  decisions: WorkLog[]; // 협의된 날짜(decision_dates)가 걸린 종료 일지
   schedules: ScheduleItem[];
   filesByLog: Record<string, ProjectFile[]>;
   totalLogs: number;
@@ -83,7 +101,7 @@ export default function ProjectCalendar({
     function at(date: string): DayBucket {
       let bucket = map.get(date);
       if (!bucket) {
-        bucket = { logs: [], todos: [], schedules: [] };
+        bucket = { logs: [], todos: [], decisions: [], schedules: [] };
         map.set(date, bucket);
       }
       return bucket;
@@ -96,10 +114,18 @@ export default function ProjectCalendar({
       if (log.next_action_date === log.date) continue;
       at(log.next_action_date).todos.push(log);
     }
+    for (const log of decisions) {
+      // 한 일지가 여러 날에 협의됐을 수 있어 날짜마다 한 번씩 담는다.
+      for (const d of parseDecisionDates(log.decision_dates)) {
+        // 기록일과 협의된 날짜가 같으면 이미 기록 쪽에 들어가 있다(할 일과 같은 규칙).
+        if (d.date === log.date) continue;
+        at(d.date).decisions.push({ log, content: d.content, time: d.time });
+      }
+    }
     for (const item of schedules) at(item.date).schedules.push(item);
 
     return map;
-  }, [logs, todos, schedules]);
+  }, [logs, todos, decisions, schedules]);
 
   // 칸에 들어갈 줄은 세 종류를 한 줄로 세워 잘라야 한다(종류마다 따로 자르면 한 칸에 아홉 줄이 들어간다).
   const chipsByDate = useMemo(() => {
@@ -110,6 +136,8 @@ export default function ProjectCalendar({
           id: log.id,
           kind: "log" as const,
           prefix: log.categories[0] ?? "",
+          // 기록은 '그날 적었다'는 뜻이라 시각이 없다.
+          time: "",
           text: log.content,
           muted: false,
           waiting: log.status === "waiting",
@@ -118,7 +146,18 @@ export default function ProjectCalendar({
           id: log.id,
           kind: "todo" as const,
           prefix: "할 일",
+          time: formatTime(log.next_action_time),
           text: log.next_action ?? "",
+          muted: false,
+          waiting: false,
+        })),
+        ...bucket.decisions.map(({ log, content, time }) => ({
+          id: log.id,
+          kind: "decision" as const,
+          prefix: "결정",
+          time,
+          // 그날 내용 → 결정사항 → 기록 본문 순으로 칸을 채운다.
+          text: content || log.decision || log.content,
           muted: false,
           waiting: false,
         })),
@@ -126,11 +165,16 @@ export default function ProjectCalendar({
           id: item.id,
           kind: "schedule" as const,
           prefix: "",
+          time: formatTime(item.start_time),
           text: item.content,
           muted: item.is_done,
           waiting: false,
         })),
       ]);
+    }
+    // 한 칸 안에서는 시각이 이른 것부터. 시각 없는 항목(기록 등)은 뒤로 보낸다.
+    for (const chips of map.values()) {
+      chips.sort((a, b) => compareTimes(a.time, b.time));
     }
     return map;
   }, [buckets]);
@@ -143,7 +187,9 @@ export default function ProjectCalendar({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h2 className="text-sm font-medium text-gray-500">진행 기록</h2>
+          <h2 className="text-sm font-medium text-gray-500">
+            {projectName} · 진행 기록
+          </h2>
           <p className="text-base font-semibold">
             {y}년 {m}월
           </p>
@@ -269,6 +315,11 @@ export default function ProjectCalendar({
                           {chip.waiting && <span className={WAITING_DOT_CLASS} />}
                           {/* flex 안에서는 min-w-0이 없으면 truncate가 먹지 않고 칸을 밀어낸다. */}
                           <span className="min-w-0 truncate">
+                            {chip.time && (
+                              <span className="font-semibold tabular-nums">
+                                {chip.time}{" "}
+                              </span>
+                            )}
                             {chip.prefix && (
                               <span className="font-semibold">{chip.prefix} </span>
                             )}
@@ -320,6 +371,7 @@ export default function ProjectCalendar({
           projectName={projectName}
           logs={buckets.get(selected)?.logs ?? []}
           todos={buckets.get(selected)?.todos ?? []}
+          decisions={buckets.get(selected)?.decisions ?? []}
           schedules={buckets.get(selected)?.schedules ?? []}
           filesByLog={filesByLog}
           onClose={() => setSelected(null)}

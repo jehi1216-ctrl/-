@@ -7,6 +7,7 @@ import {
   deleteScheduleItem,
 } from "@/app/(main)/dashboard/schedule-actions";
 import { projectColorClass } from "@/lib/projectColor";
+import { formatTime, compareTimes } from "@/lib/date";
 import type { ScheduleItem } from "@/types/schedule";
 
 export default function ScheduleSection({
@@ -19,6 +20,10 @@ export default function ScheduleSection({
   projects: { id: string; name: string }[];
 }) {
   const projectNames = new Map(projects.map((p) => [p.id, p.name]));
+  // 시각이 붙은 일정을 시간순으로 앞에 세우고, 시각 없는 것은 뒤로 보낸다.
+  const sorted = [...items].sort((a, b) =>
+    compareTimes(a.start_time, b.start_time)
+  );
   const [isPending, startTransition] = useTransition();
 
   function handleToggle(item: ScheduleItem) {
@@ -31,13 +36,13 @@ export default function ScheduleSection({
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
-      <h2 className="mb-3 text-sm font-medium text-gray-500">할 일 / 일정</h2>
+      <h2 className="mb-3 text-sm font-medium text-gray-500">오늘 일정</h2>
 
       {items.length === 0 ? (
-        <p className="mb-3 text-sm text-gray-400">등록된 할 일이 없어요.</p>
+        <p className="mb-3 text-sm text-gray-400">오늘 일정이 없어요.</p>
       ) : (
         <ul className="mb-3 space-y-2">
-          {items.map((item) => (
+          {sorted.map((item) => (
             <li
               key={item.id}
               className={`flex items-center justify-between gap-2 rounded-md border border-gray-100 px-3 py-2 text-sm ${
@@ -51,6 +56,11 @@ export default function ScheduleSection({
                   onChange={() => handleToggle(item)}
                   disabled={isPending}
                 />
+                {item.start_time && (
+                  <span className="flex-shrink-0 font-medium tabular-nums text-gray-500">
+                    {formatTime(item.start_time)}
+                  </span>
+                )}
                 {item.project_id && (
                   <span
                     className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${projectColorClass(
@@ -85,9 +95,15 @@ export default function ScheduleSection({
           className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 sm:w-40"
         />
         <input
+          type="time"
+          name="start_time"
+          aria-label="시각 (선택)"
+          className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 sm:w-28"
+        />
+        <input
           name="content"
           required
-          placeholder="할 일을 입력하세요"
+          placeholder="일정을 입력하세요"
           className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
         />
         <select

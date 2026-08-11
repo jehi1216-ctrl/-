@@ -12,9 +12,12 @@ import {
   STATUS_LABEL,
   STATUS_BADGE_CLASS,
   STATUS_OPTIONS,
+  parseDecisionDates,
+  type DecisionDate,
   type WorkLog,
 } from "@/types/journal";
 import { categoryBadges } from "@/lib/categoryDisplay";
+import { formatTime } from "@/lib/date";
 import ProjectFiles from "./ProjectFiles";
 import EditLogForm from "./EditLogForm";
 import CloseLogPrompt from "./CloseLogPrompt";
@@ -47,9 +50,9 @@ export default function JournalEntryCard({
     });
   }
 
-  function handleClose(decision: string) {
+  function handleClose(decision: string, decisionDates: DecisionDate[]) {
     startTransition(async () => {
-      await closeLog(log.id, decision);
+      await closeLog(log.id, decision, decisionDates);
       setClosing(false);
     });
   }
@@ -68,6 +71,8 @@ export default function JournalEntryCard({
       </li>
     );
   }
+
+  const decisionDates = parseDecisionDates(log.decision_dates);
 
   return (
     <li
@@ -113,11 +118,28 @@ export default function JournalEntryCard({
               {log.result}
             </p>
           )}
-          {log.status === "done" && log.decision && (
-            <p className="mt-1.5 whitespace-pre-wrap break-words rounded-md bg-emerald-50 px-2 py-1 text-sm text-emerald-900">
-              <span className="font-medium">결정 </span>
-              {log.decision}
-            </p>
+          {log.status === "done" && (log.decision || decisionDates.length > 0) && (
+            <div className="mt-1.5 rounded-md bg-emerald-50 px-2 py-1 text-sm text-emerald-900">
+              {log.decision && (
+                <p className="whitespace-pre-wrap break-words">
+                  <span className="font-medium">결정 </span>
+                  {log.decision}
+                </p>
+              )}
+              {decisionDates.length > 0 && (
+                <ul className={log.decision ? "mt-1 space-y-0.5" : "space-y-0.5"}>
+                  {decisionDates.map((d) => (
+                    <li key={d.date} className="break-words text-xs">
+                      <span className="font-medium tabular-nums">
+                        협의 {d.date}
+                        {d.time && ` ${d.time}`}
+                      </span>
+                      {d.content && <span className="ml-1.5">{d.content}</span>}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           )}
           {log.status === "todo" && log.next_action && (
             <p className="mt-1.5 whitespace-pre-wrap break-words rounded-md bg-amber-50 px-2 py-1 text-sm text-amber-800">
@@ -125,7 +147,8 @@ export default function JournalEntryCard({
               {log.next_action}
               {log.next_action_date && (
                 <span className="ml-1 text-xs text-amber-600">
-                  ({log.next_action_date})
+                  ({log.next_action_date}
+                  {log.next_action_time && ` ${formatTime(log.next_action_time)}`})
                 </span>
               )}
             </p>
@@ -167,6 +190,7 @@ export default function JournalEntryCard({
       {closing && (
         <CloseLogPrompt
           defaultDecision={log.decision ?? ""}
+          defaultDecisionDates={parseDecisionDates(log.decision_dates)}
           pending={isPending}
           onConfirm={handleClose}
           onCancel={() => setClosing(false)}

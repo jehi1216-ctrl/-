@@ -1,3 +1,5 @@
+import { compareTimes } from "@/lib/date";
+
 export type JournalStatus = "todo" | "waiting" | "done";
 
 export type LogType = "design" | "build";
@@ -51,6 +53,39 @@ export interface CategoryDetails {
   브랜딩?: NumberedEntry;
 }
 
+// 종료하며 협의된 날짜 한 건. 날마다 무엇이 있는지가 달라 내용을 함께 담는다.
+export interface DecisionDate {
+  date: string; // YYYY-MM-DD
+  time: string; // HH:MM. 선택 — 빈 문자열이면 시간 없는 항목
+  content: string; // 그날 일정 내용. 날짜만 남기고 비워둘 수 있다
+}
+
+// decision_dates는 jsonb라 DB에서 무엇이든 올 수 있다(예전 값, 손으로 고친 값).
+// 읽는 쪽은 전부 이걸 거쳐서 같은 모양·같은 순서를 보게 한다.
+export function parseDecisionDates(value: unknown): DecisionDate[] {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set<string>();
+  const out: DecisionDate[] = [];
+  for (const raw of value) {
+    if (!raw || typeof raw !== "object") continue;
+    const { date, time, content } = raw as Record<string, unknown>;
+    if (typeof date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
+    // 같은 날이 두 번 들어오면 달력에 두 번 찍힐 뿐이라 앞의 것만 남긴다.
+    if (seen.has(date)) continue;
+    seen.add(date);
+    out.push({
+      date,
+      // time 키가 없던 시절의 값도 그대로 읽혀야 한다. "HH:MM:SS"로 와도 앞 5글자만 쓴다.
+      time: typeof time === "string" ? time.slice(0, 5) : "",
+      content: typeof content === "string" ? content : "",
+    });
+  }
+  return out.sort(
+    (a, b) =>
+      (a.date < b.date ? -1 : a.date > b.date ? 1 : 0) || compareTimes(a.time, b.time)
+  );
+}
+
 export interface WorkLog {
   id: string;
   user_id: string;
@@ -64,7 +99,9 @@ export interface WorkLog {
   status: JournalStatus;
   next_action: string | null;
   next_action_date: string | null; // YYYY-MM-DD, 선택
+  next_action_time: string | null; // HH:MM, 선택 — 마감 시각
   decision: string | null; // 종료하며 남긴 결정사항, 선택
+  decision_dates: DecisionDate[] | null; // 종료하며 협의된 날짜들, 선택
   created_at: string;
 }
 

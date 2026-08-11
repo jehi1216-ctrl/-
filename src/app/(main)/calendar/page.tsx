@@ -1,11 +1,18 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { currentMonthKST, shiftMonth, buildMonthGrid, todayKST } from "@/lib/date";
+import {
+  currentMonthKST,
+  shiftMonth,
+  buildMonthGrid,
+  todayKST,
+  formatTime,
+  compareTimes,
+} from "@/lib/date";
 import { projectColorClass } from "@/lib/projectColor";
 import CalendarGrid from "@/components/CalendarGrid";
 import type { CalendarEntry } from "@/types/calendar";
 import type { ScheduleItem } from "@/types/schedule";
-import type { WorkLog } from "@/types/journal";
+import { parseDecisionDates, type WorkLog } from "@/types/journal";
 import type { Project } from "@/types/project";
 
 export default async function CalendarPage({
@@ -26,8 +33,12 @@ export default async function CalendarPage({
   const rangeStart = weeks[0][0].date;
   const rangeEnd = weeks[weeks.length - 1][6].date;
 
-  const [{ data: scheduleItems }, { data: todoLogs }, { data: projects }] =
-    await Promise.all([
+  const [
+    { data: scheduleItems },
+    { data: todoLogs },
+    { data: decisionLogs },
+    { data: projects },
+  ] = await Promise.all([
       supabase
         .from("schedule_items")
         .select("*")
@@ -42,6 +53,16 @@ export default async function CalendarPage({
         .eq("status", "todo")
         .gte("next_action_date", rangeStart)
         .lte("next_action_date", rangeEnd)
+        .order("created_at", { ascending: true }),
+      // 종료된 일지라도 '그날로 협의됨'이 적혀 있으면 달력에 남아야 한다.
+      // decision_dates는 jsonb라 날짜 범위로 자를 수가 없다. 값이 있는 것만 받아
+      // 이 달에 걸리는 날짜를 아래에서 골라낸다.
+      supabase
+        .from("work_logs")
+        .select("*")
+        .eq("user_id", user!.id)
+        .eq("status", "done")
+        .not("decision_dates", "is", null)
         .order("created_at", { ascending: true }),
       supabase
         .from("projects")
@@ -72,6 +93,7 @@ export default async function CalendarPage({
       kind: "schedule",
       id: item.id,
       label: item.content,
+      time: formatTime(item.start_time) || null,
       done: item.is_done,
       projectId: item.project_id,
       projectName,
@@ -86,11 +108,38 @@ export default async function CalendarPage({
       kind: "todo",
       id: log.id,
       label: log.next_action,
+      time: formatTime(log.next_action_time) || null,
       projectId: log.project_id,
       projectName,
       content: log.content,
       logDate: log.date,
     });
+  }
+
+  for (const log of (decisionLogs ?? []) as WorkLog[]) {
+    const projectName = projectNames.get(log.project_id) ?? "알 수 없는 현장";
+    // 한 일지가 여러 날에 협의됐을 수 있다. 날짜마다 한 칸씩 찍는다.
+    for (const d of parseDecisionDates(log.decision_dates)) {
+      if (d.date < rangeStart || d.date > rangeEnd) continue;
+      legend.set(log.project_id, projectName);
+      push(d.date, {
+        kind: "decision",
+        id: log.id,
+        time: d.time || null,
+        // 그날 내용을 안 적었으면 결정사항을, 그것도 없으면 기록 본문이라도 보여준다.
+        label: d.content || log.decision || log.content,
+        decision: log.decision,
+        projectId: log.project_id,
+        projectName,
+        content: log.content,
+        logDate: log.date,
+      });
+    }
+  }
+
+  // 한 칸 안에서는 시각이 이른 것부터. 시각 없는 항목은 '하루 종일'로 보고 뒤로 보낸다.
+  for (const bucket of itemsByDate.values()) {
+    bucket.sort((a, b) => compareTimes(a.time, b.time));
   }
 
   const [y, m] = month.split("-").map(Number);

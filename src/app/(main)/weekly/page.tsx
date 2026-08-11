@@ -10,6 +10,8 @@ import {
   formatShortDate,
   weekdayOf,
   dueBadge,
+  formatTime,
+  compareTimes,
 } from "@/lib/date";
 import { projectColorClass, projectBarClass } from "@/lib/projectColor";
 import type { WorkLog } from "@/types/journal";
@@ -36,6 +38,7 @@ interface WeeklyItem {
   bucket: Bucket;
   label: string;
   date: string | null;
+  time: string; // HH:MM. 빈 문자열이면 시각 없는 항목
   isSchedule: boolean;
   hint?: string; // 마우스를 올렸을 때 보여줄 원본 기록 본문
   result?: string | null; // 일지에 적어둔 결과
@@ -142,6 +145,7 @@ export default async function WeeklyPage({
       bucket,
       label,
       date: bucket === "waiting" ? null : log.next_action_date,
+      time: formatTime(log.next_action_time),
       isSchedule: false,
       hint: log.content,
       result: log.result,
@@ -157,6 +161,7 @@ export default async function WeeklyPage({
       bucket,
       label: item.content,
       date: item.date,
+      time: formatTime(item.start_time),
       isSchedule: true,
     });
   }
@@ -179,7 +184,8 @@ export default async function WeeklyPage({
       if (order !== 0) return order;
       const ad = a.date ?? "";
       const bd = b.date ?? "";
-      return ad < bd ? -1 : ad > bd ? 1 : 0;
+      // 같은 날이면 시각이 이른 것부터, 시각 없는 항목은 뒤로.
+      return (ad < bd ? -1 : ad > bd ? 1 : 0) || compareTimes(a.time, b.time);
     });
   }
 
@@ -288,6 +294,11 @@ export default async function WeeklyPage({
                         </span>
                         <div className="min-w-0 flex-1">
                           <span className="break-words text-sm text-gray-800">
+                            {item.time && (
+                              <span className="mr-1.5 align-middle font-medium tabular-nums text-gray-500">
+                                {item.time}
+                              </span>
+                            )}
                             {item.isSchedule && (
                               <span className="mr-1.5 rounded bg-gray-100 px-1.5 py-0.5 align-middle text-[11px] font-medium text-gray-500">
                                 일정

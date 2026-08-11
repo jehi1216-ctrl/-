@@ -8,6 +8,8 @@ import { projectColorClass } from "@/lib/projectColor";
 import {
   STATUS_LABEL,
   STATUS_BADGE_CLASS,
+  parseDecisionDates,
+  type DecisionDate,
   type JournalStatus,
   type WorkLog,
 } from "@/types/journal";
@@ -35,9 +37,9 @@ function OpenLogRow({
     });
   }
 
-  function handleClose(decision: string) {
+  function handleClose(decision: string, decisionDates: DecisionDate[]) {
     startTransition(async () => {
-      await closeLog(log.id, decision);
+      await closeLog(log.id, decision, decisionDates);
       setClosing(false);
     });
   }
@@ -132,6 +134,7 @@ function OpenLogRow({
       {closing && (
         <CloseLogPrompt
           defaultDecision={log.decision ?? ""}
+          defaultDecisionDates={parseDecisionDates(log.decision_dates)}
           pending={isPending}
           onConfirm={handleClose}
           onCancel={() => setClosing(false)}

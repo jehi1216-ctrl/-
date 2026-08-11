@@ -6,6 +6,16 @@ The app is called **ArchiLog** (한글 보조 표기 "나의 건축일지") in t
 
 Vocabulary drifted mid-project: a job used to be 현장 everywhere, and the nav tab + `/projects` heading are now 프로젝트. Other screens still say 현장 (checklist picker, the 현장 없음 option on 일정). That is not yet unified — ask before doing a sweep.
 
+**세 가지 “할 일”은 이름이 가르다** — the UI used to call all three 할 일, and 등록된 할 일이 없어요 was the *same sentence* on two unrelated screens. Each concept now owns exactly one word, and **할 일 belongs to `work_logs` alone**:
+
+| 개념 | UI 용어 | 쓰는 곳 |
+| --- | --- | --- |
+| `work_logs.next_action` (`status='todo'`) | **할 일** / 내가 할 일 | `STATUS_LABEL`, `JournalEntryCard`, `OpenLogsSection`, `StatusFieldset`, 캘린더 chip |
+| `schedule_items` | **일정** | `ScheduleSection`, `/calendar`, `/weekly`, `ProjectCalendar` |
+| `project_checklist_items` | **항목** (묶어서 말할 땐 체크리스트) | `ProjectChecklist`, `ChecklistBoard`, `/checklist`, `checklist-actions` |
+
+Don't reintroduce 할 일 for a 일정 or a 체크리스트 항목. `ProjectChecklist`'s `title` prop defaults to 체크리스트 — `ChecklistBoard` used to override it with 할 일 and no longer does.
+
 ## Commands
 
 ```bash
@@ -40,9 +50,14 @@ See `supabase/schema.sql` + `supabase/migration_0NN_*.sql` for history, `src/typ
 - `categories` is a text array (no DB check constraint); `category_details` (jsonb) carries per-category extras — 협의/PT/브랜딩 auto-number a `seq` per project by counting existing rows (`createLog`).
 - `log_type` splits every log into DESIGN (검토/협의/설계/PT/대관/브랜딩, with `category_details`) or BUILD (`BUILD_CATEGORY_OPTIONS`: 건축/인테리어/감리/기타 — plain tags, no numbering). Old logs keep tag text that is no longer offered as a checkbox.
 - Entry flow is fixed: 프로젝트 → 기록(`content`) → 결과(`result`, optional) → 상태(`status`).
-- **`status` is not a progress flag — it records what happens next:** `todo` (내가 할 일, text in `next_action`, optional `next_action_date`), `waiting` (답변 대기), `done` (종료, 결정사항 in `decision`).
+- **`status` is not a progress flag — it records what happens next:** `todo` (내가 할 일, text in `next_action`, optional `next_action_date`), `waiting` (답변 대기), `done` (종료, 결정사항 in `decision`, optional `decision_dates`).
+- **`next_action_date` and `decision_dates` are different dates and must not be merged.** `next_action_date` is "the day I have to act"; `decision_dates` is "the day(s) this was agreed for" — a closed log can still own calendar slots. Both surface on the calendars, `decision_dates` as 결정 chips.
+- **Times are optional, and sit next to their date:** `schedule_items.start_time`, `work_logs.next_action_time`, and a `time` key per `decision_dates` entry. A timeless item is "하루 종일" and **sorts last** — every cell, panel and `/weekly` uses `compareTimes()`. Read times through `formatTime()`: Postgres returns `HH:MM:SS`, `<input type="time">` speaks `HH:MM`. `updateNextAction` drops the time when the date is cleared. 기록 (a log's own `date`) has **no** time — it means "the day I wrote this", not an appointment.
+- **`decision_dates` is `jsonb`** — `[{ date, time, content }, …]`; a multi-day 협의 differs per day. Read it only via **`parseDecisionDates()`** (`src/types/journal.ts`): it drops malformed rows, keeps one entry per date, and sorts, so no caller has to trust the column. jsonb **cannot be date-range filtered**, so both calendar pages fetch `done` logs with `.not("decision_dates", "is", null)` and pick in-range dates in JS — fine at this size; past a few thousand closed logs, move the pairs to their own table rather than adding a parallel `date[]`.
+- A log with N in-range dates becomes N `CalendarEntry` rows **sharing the same `id`**, which is safe only because React keys are scoped to each day's array — that is why `parseDecisionDates` must keep dates unique.
+- The chip/row text falls back **그날 내용 → 결정사항 → 기록 본문**, and each panel re-checks that fallback before printing a second line, so the same sentence is never shown twice in one row.
 - `next_action`/`next_action_date` are written only when `status === 'todo'`, `decision` only when `status === 'done'`; `createLog`/`updateLog` null the others out. But `updateLogStatus` (the badge that cycles todo → waiting → done) deliberately **does not** clear them, so one stray click can't destroy typed text and cycling back restores it. Every reader gates on status, so a stale value is never displayed.
-- Closing does **not** go through `updateLogStatus`: the 종료 button opens `CloseLogPrompt.tsx` (shared by `JournalEntryCard`, `OpenLogsSection`, `CalendarDayPanel`) and calls `closeLog(id, decision)`. Its empty-decision case ("그냥 종료") omits the column from the update rather than writing null, so an earlier 결정사항 survives.
+- Closing does **not** go through `updateLogStatus`: the 종료 button opens `CloseLogPrompt.tsx` (shared by `JournalEntryCard`, `OpenLogsSection`, `CalendarDayPanel`) and calls `closeLog(id, decision, decisionDates)`. Each empty field is **omitted** rather than written as null, so an earlier 결정사항/협의된 날짜 survives — so **clearing either is only possible from the edit form** (`updateLog` writes both explicitly). `DecisionDatesField.tsx` is the shared picker: a `date` input cannot multi-select, so rows are added one at a time. Given a `name` it emits **one hidden input per row carrying that row's JSON**; parallel `getAll()` arrays would pair date to content by position and break the moment one side is empty.
 - `StatusFieldset.tsx` (radios + conditional 할 일/결정사항 inputs) is shared by `JournalForm` and `EditLogForm`. The radios are React-controlled, so `JournalForm` remounts it via `key={state.submittedAt}` to reset after a save — `form.reset()` alone won't do it.
 - A log's 할 일 is deliberately **not** wired to `project_checklist_items`. It stays in the log.
 
@@ -55,7 +70,7 @@ See `supabase/schema.sql` + `supabase/migration_0NN_*.sql` for history, `src/typ
 - `note` is a free-form per-item comment edited together with content/assignee; there is no separate "add comment" action.
 - `ProjectChecklist.tsx` is reused in three contexts (checklist tab, compact journal form, and any future compact view). Its `compact`/`title`/`groupByAssignee`/`groups`/`groupId` props all default to the original flat-list behavior — check every call site before changing a default.
 
-**`schedule_items`** — per-user, per-date 일정, with an **optional** `project_id` (`on delete set null`, so deleting a site keeps the 일정 and just unlinks it). Unrelated to `project_checklist_items`.
+**`schedule_items`** — per-user, per-date 일정 with an optional `start_time`, and an **optional** `project_id` (`on delete set null`, so deleting a site keeps the 일정 and just unlinks it). Unrelated to `project_checklist_items`.
 
 **`project_files`** — attachment metadata; `file_path` is an opaque string whose meaning depends on the storage backend (see below).
 
@@ -75,17 +90,18 @@ Drill-down screens keep their state in **search params, not React state**, so ba
 
 **`/journal` (전체 목록)** — filterable log list, with `OpenLogsSection.tsx` (미처리 모아보기) on top. It derives its list from the `allLogs` the page already fetched, so **it narrows with the active filters** at no extra round-trip. It was briefly on `/dashboard` too and was removed — the dashboard is for today's entry and the roll-up duplicated the list right below it. It writes only through `updateLogStatus`/`closeLog` plus the shared `EditLogForm`, so it needs no action of its own, and renders nothing when there are no open logs.
 
-**`/calendar`** — `schedule_items` plus `todo` logs with a `next_action_date`, merged into one `CalendarEntry` union (`src/types/calendar.ts` — kept out of both components so the two client files and the server page can import it without a cycle). `CalendarGrid.tsx` is a client component whose cells are buttons; clicking one expands that day in full via `CalendarDayPanel.tsx`, since cell chips truncate. The panel is also where items are **edited**, each through a narrow action rather than the full form: `updateNextAction` (할 일 text + date — clearing the date drops it off the calendar but keeps it in `/weekly`), `updateLogStatus`/`closeLog`, and the `schedule_items` CRUD. `CalendarGrid` remounts the panel with `key={selected}` so per-row edit state doesn't leak between days. Only 일정 can be *created* here — a 할 일 only exists as part of a log.
+**`/calendar`** — `schedule_items`, `todo` logs with a `next_action_date`, and `done` logs with a `decision_dates` entry in range, merged into one `CalendarEntry` union (`src/types/calendar.ts` — kept out of both components so the two client files and the server page can import it without a cycle). `CalendarGrid.tsx` is a client component whose cells are buttons; clicking one expands that day in full via `CalendarDayPanel.tsx`, since cell chips truncate. The panel is also where items are **edited**, each through a narrow action rather than the full form: `updateNextAction` (할 일 text + date — clearing the date drops it off the calendar but keeps it in `/weekly`), `updateLogStatus`/`closeLog`, and the `schedule_items` CRUD. `CalendarGrid` remounts the panel with `key={selected}` so per-row edit state doesn't leak between days. Only 일정 can be *created* here — a 할 일 only exists as part of a log.
 
 **`/checklist`** — three drill-downs: project card grid (split DESIGN/BUILD, with remaining/done and per-status counts) → that project's folder cards (+ a 폴더 없음 card when unfiled items exist) → one folder's items via `ChecklistBoard.tsx`. `group=none` selects the unfiled bucket. Two load-bearing details: a project with **no** folders skips the folder screen entirely and goes straight to the flat list (so nothing changed for projects that never adopted folders), and *because of that skip* the 폴더 추가 form must also render on the flat list — otherwise it is unreachable and no first folder could ever be created. Items are fetched for all projects on every screen (the grids need counts); only `project_contacts` is narrowed. Inside a folder, items sub-group by resolved assignee with 나 first and 담당자 없음 last. The add-form carries a hidden `group_id` so items land in the folder they were typed into; the *edit* form's folder `<select>` (rendered only when folders exist) is how an item moves.
 
 Checklist items are managed **exclusively** from this tab, not the project detail page (removed there on purpose).
 
-**`/projects/[id]`** — info card, 진행사항, 협력업체, 문서함, then **`ProjectCalendar.tsx`**, a month grid scoped to that one project (`?month=`, snapped to the same `buildMonthGrid` range as `/calendar`). It replaced a `JournalForm` + DESIGN/BUILD log list that used to live here: writing logs happens on `/dashboard`, and this screen is now read-and-revise only.
+**`/projects/[id]`** — **`ProjectCalendar.tsx`** first, then info card, 진행사항, 협력업체, 문서함. The calendar is a month grid scoped to that one project (`?month=`, snapped to the same `buildMonthGrid` range as `/calendar`). It replaced a `JournalForm` + DESIGN/BUILD log list that used to live here: writing logs happens on `/dashboard`, and this screen is now read-and-revise only.
 
 - It plots three things the global `/calendar` does not combine: **일지 by `date`** (the history — `/calendar` never shows these), **할 일 by `next_action_date`**, and this project's **`schedule_items`**. A log whose `date` equals its own `next_action_date` is filed once, as a 기록, so the same card can't appear twice in a day.
 - Chips are coloured **by kind, not by project** — `projectColorClass()` is useless when every row is the same project. The three complete class strings live in `CHIP_CLASS`. All kinds are flattened into one `chipsByDate` list before slicing to `MAX_CHIPS`; slicing each kind separately would put nine rows in a 96px cell. A chip is a flex row, so the text span needs `min-w-0` or `truncate` silently stops working and long content widens the cell.
 - **답변 대기 gets two markers, and they answer different questions.** A violet dot on the chip says "this particular record is stuck" (a badge doesn't fit in the cell). The `답변 대기 N건` pill in the summary row is project-wide and **always rendered regardless of the month on screen**, because a waiting log sits only on its own record date — one that has been open for weeks lives in a past month and would otherwise vanish from view entirely. The pill links to `/journal?project=<id>`, whose 미처리 모아보기 is where they get resolved. Both take their violet from `STATUS_BADGE_CLASS.waiting`, so the app-wide status palette stays the single source.
+- The calendar sits **above** the info card because the flow is "what happened / what's next", not "what are this project's numbers". That moves the page's only `<h1>` (the project name, in `ProjectInfoCard`) below the fold, so the calendar heading carries `{projectName} · 진행 기록` — don't drop the name from it without putting the title back on top.
 - Editing reuses what already exists: `JournalEntryCard` for both 기록 and 할 일 (its 수정 opens `EditLogForm`, which covers 할 일 문구/날짜, so no narrow todo action is needed here), and `ScheduleRow` **exported from `CalendarDayPanel.tsx`**. `ScheduleRow` must be handed `projects={[this project]}` — with an empty list its `<select>` has no matching option and saving silently unlinks the 일정.
 - A project whose records are all in past months would otherwise show an empty grid with no hint, so the page also reads every log's `date, status` (two columns, one round-trip) to render 처음/최근 month links, the empty-month pointer, and the 답변 대기 count — don't add a separate count query for any of these.
 - `schedule_items` now surface on this page, so **every action in `schedule-actions.ts` must revalidate `/projects/<id>`** via its `revalidateAll()` helper — `updateScheduleItem` reads the row's old `project_id` first so moving a 일정 refreshes the project it left as well as the one it joined.
@@ -136,7 +152,7 @@ Symptom of a missed migration: Server Actions fail with `Could not find the '<co
 
 `alter table … add column if not exists` is safely re-runnable, but **`create policy` is not** — re-running a migration that creates RLS policies errors with `policy already exists`. Skip those blocks on a re-run.
 
-Recent migrations: `012` result + next_action, `013` next_action_date, `014` decision, `015` schedule project link, `016` checklist folders.
+Recent migrations: `012` result + next_action, `013` next_action_date, `014` decision, `015` schedule project link, `016` checklist folders, `017` decision_dates, `018` times (`start_time`, `next_action_time`).
 
 ### Working across multiple machines
 

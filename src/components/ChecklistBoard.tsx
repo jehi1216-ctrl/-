@@ -17,7 +17,7 @@ import {
   type ProjectContact,
 } from "@/types/project";
 
-// 폴더 하나(또는 폴더 없음 묶음)의 할 일 목록. 어느 폴더를 볼지는 /checklist 페이지가
+// 폴더 하나(또는 폴더 없음 묶음)의 항목 목록. 어느 폴더를 볼지는 /checklist 페이지가
 // ?group= 으로 정하고, 여기서는 완료 항목 토글과 폴더 이름 변경/삭제만 맡는다.
 export default function ChecklistBoard({
   project,
@@ -52,7 +52,7 @@ export default function ChecklistBoard({
     if (!group) return;
     if (
       !confirm(
-        `'${group.name}' 폴더를 삭제할까요?\n안에 있는 할 일 ${items.length}건은 지워지지 않고 '${NO_GROUP_LABEL}'으로 이동합니다.`
+        `'${group.name}' 폴더를 삭제할까요?\n안에 있는 항목 ${items.length}건은 지워지지 않고 '${NO_GROUP_LABEL}'으로 이동합니다.`
       )
     )
       return;
@@ -148,7 +148,7 @@ export default function ChecklistBoard({
         contacts={contacts}
         groups={groups}
         groupId={group?.id ?? null}
-        title="할 일"
+        title="체크리스트"
         groupByAssignee
       />
     </div>
