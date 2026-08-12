@@ -15,6 +15,7 @@ export default function StatusFieldset({
   defaultNextAction = "",
   defaultNextActionDate = "",
   defaultNextActionTime = "",
+  defaultComment = "",
   defaultDecision = "",
   defaultDecisionDates = [],
 }: {
@@ -22,6 +23,7 @@ export default function StatusFieldset({
   defaultNextAction?: string;
   defaultNextActionDate?: string;
   defaultNextActionTime?: string;
+  defaultComment?: string; // 답변 대기 코멘트 — work_logs.result에 담긴다
   defaultDecision?: string;
   defaultDecisionDates?: DecisionDate[];
 }) {
@@ -85,6 +87,21 @@ export default function StatusFieldset({
               선택 — 넣으면 캘린더에 표시됩니다
             </span>
           </label>
+        </div>
+      )}
+
+      {/* 답변 대기는 '어디까지 와 있나'가 전부인데 적을 자리가 없었다. 전에는 폼 맨 아래
+          결과칸에 그걸 적고 있었으므로 그 칸(name="result")을 여기로 옮겨 쓴다 — 그래서
+          이미 적어둔 결과가 그대로 이 칸에 들어와 이어서 쓸 수 있다. */}
+      {status === "waiting" && (
+        <div className="mt-2">
+          <textarea
+            name="result"
+            rows={2}
+            defaultValue={defaultComment}
+            placeholder="어디까지 진행됐는지, 누구 답을 기다리는지 (선택)"
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+          />
         </div>
       )}
 

@@ -114,7 +114,7 @@ export default function JournalEntryCard({
           </p>
           {log.result && (
             <p className="mt-1.5 whitespace-pre-wrap break-words border-l-2 border-gray-200 pl-2 text-sm text-gray-600">
-              <span className="font-medium text-gray-500">결과 </span>
+              <span className="font-medium text-gray-500">코멘트 </span>
               {log.result}
             </p>
           )}

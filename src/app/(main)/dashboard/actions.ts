@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { todayKST } from "@/lib/date";
 import {
   NUMBERED_CATEGORIES,
+  CONSULT_NUMBERED_FIELD,
   type CategoryDetails,
   parseDecisionDates,
   type DecisionDate,
@@ -20,6 +21,29 @@ const NUMBERED_FIELD_NAME: Record<(typeof NUMBERED_CATEGORIES)[number], string> 
 };
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
+
+// 다음 회차 번호. **이미 번호를 받은 일지의 최댓값 +1**로 뽑는다.
+// 협의는 굵직한 안건만 번호를 받으므로 '협의 태그가 붙은 일지 수'로 세면
+// 번호 없는 일지까지 자리를 차지해 번호가 건너뛴다. seq는 jsonb 안에 있어
+// 범위 질의가 안 되니 그 프로젝트 것만 읽어 JS에서 고른다.
+async function nextSeq(
+  supabase: SupabaseServerClient,
+  cat: (typeof NUMBERED_CATEGORIES)[number],
+  projectId: string
+): Promise<number> {
+  const { data } = await supabase
+    .from("work_logs")
+    .select("category_details")
+    .eq("project_id", projectId)
+    .contains("categories", [cat]);
+
+  let max = 0;
+  for (const row of (data ?? []) as { category_details: CategoryDetails | null }[]) {
+    const seq = row.category_details?.[cat]?.seq;
+    if (typeof seq === "number" && seq > max) max = seq;
+  }
+  return max + 1;
+}
 
 async function buildCategoryDetails(
   supabase: SupabaseServerClient,
@@ -45,6 +69,8 @@ async function buildCategoryDetails(
 
   for (const cat of NUMBERED_CATEGORIES) {
     if (!categories.includes(cat)) continue;
+    // 협의만 옵트인이다 — 체크를 안 하면 제목도 번호도 없이 협의 태그만 남는다.
+    if (cat === "협의" && formData.get(CONSULT_NUMBERED_FIELD) === null) continue;
 
     const title = String(formData.get(NUMBERED_FIELD_NAME[cat]) ?? "").trim();
     if (!title) {
@@ -55,17 +81,11 @@ async function buildCategoryDetails(
       ? existing.category_details[cat]
       : undefined;
 
-    if (existingEntry) {
-      category_details[cat] = { seq: existingEntry.seq, title };
-    } else {
-      const { count } = await supabase
-        .from("work_logs")
-        .select("*", { count: "exact", head: true })
-        .eq("project_id", projectId)
-        .contains("categories", [cat]);
-
-      category_details[cat] = { seq: (count ?? 0) + 1, title };
-    }
+    // 이미 번호를 받은 건이면 그 번호를 지킨다. 수정하다 번호가 바뀌면 안 된다.
+    category_details[cat] = {
+      seq: existingEntry?.seq ?? (await nextSeq(supabase, cat, projectId)),
+      title,
+    };
   }
 
   return { details: category_details };
@@ -130,7 +150,8 @@ export async function createLog(
     date,
     log_type,
     content,
-    result: result || null,
+    // result는 이제 답변 대기 코멘트칸 하나만 쓴다 (폼의 결과칸은 없앴다).
+    result: status === "waiting" ? result || null : null,
     categories,
     category_details: parsed.details,
     status,
@@ -218,7 +239,10 @@ export async function updateLog(
     .from("work_logs")
     .update({
       content,
-      result: result || null,
+      // 답변 대기일 때만 코멘트칸이 뜨므로 그때만 쓴다. 다른 상태에서는 손대지 않는다 —
+      // 폼에 결과칸이 없던 시절 적어둔 텍스트를 안 보이는 채로 지워버리면 안 된다
+      // (closeLog이 결정사항을 비우지 않고 두는 것과 같은 이유).
+      ...(status === "waiting" ? { result: result || null } : {}),
       categories,
       category_details: parsed.details,
       status,

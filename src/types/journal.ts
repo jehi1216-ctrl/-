@@ -38,6 +38,10 @@ export const PERMIT_STAGES = ["심의", "허가", "사용승인"] as const;
 export const CONSULT_SUBOPTIONS = ["발주처", "구조", "토목", "MEP", "업체협의"] as const;
 export const NUMBERED_CATEGORIES = ["협의", "PT", "브랜딩"] as const;
 
+// 협의는 굵직한 안건만 회차 번호를 받는다 — 자잘한 협의는 태그만 남고 번호가 없다.
+// 그 옵트인 체크박스의 이름. 폼(클라이언트)과 서버 액션이 같은 값을 써야 해서 여기 둔다.
+export const CONSULT_NUMBERED_FIELD = "consult_numbered";
+
 export interface NumberedEntry {
   seq: number;
   title: string;

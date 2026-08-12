@@ -90,22 +90,10 @@ export default function EditLogForm({
         />
       </div>
 
-      <div>
-        <label htmlFor={`result-${log.id}`} className="mb-1 block text-sm font-medium">
-          결과 <span className="text-gray-400">— 선택</span>
-        </label>
-        <textarea
-          id={`result-${log.id}`}
-          name="result"
-          rows={2}
-          defaultValue={log.result ?? ""}
-          placeholder="어떻게 마무리됐는지 적어주세요"
-          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
-        />
-      </div>
-
+      {/* 결과칸은 걷어냈다 — 답변 대기 코멘트가 같은 name="result"로 그 값을 받는다. */}
       <StatusFieldset
         defaultStatus={log.status}
+        defaultComment={log.result ?? ""}
         defaultNextAction={log.next_action ?? ""}
         defaultNextActionDate={log.next_action_date ?? ""}
         defaultNextActionTime={formatTime(log.next_action_time)}

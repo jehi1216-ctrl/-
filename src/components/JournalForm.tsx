@@ -153,19 +153,7 @@ export default function JournalForm({
         )}
       </div>
 
-      <div>
-        <label htmlFor="result" className="mb-1 block text-sm font-medium">
-          결과 <span className="text-gray-400">— 선택</span>
-        </label>
-        <textarea
-          id="result"
-          name="result"
-          rows={2}
-          placeholder="어떻게 마무리됐는지 적어주세요"
-          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
-        />
-      </div>
-
+      {/* 결과칸은 걷어냈다 — 종료는 결정사항, 답변 대기는 코멘트가 그 자리를 받는다. */}
       <StatusFieldset key={state.submittedAt} />
 
       <SubmitButton />
