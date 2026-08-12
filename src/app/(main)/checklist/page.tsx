@@ -9,6 +9,7 @@ import {
   PHASE_BADGE_CLASS,
   PHASES_BY_TYPE,
   NO_GROUP_LABEL,
+  UNGROUPED_PARAM,
   type Project,
   type ChecklistGroup,
   type ChecklistItem,
@@ -16,9 +17,6 @@ import {
   type ProjectContact,
 } from "@/types/project";
 import { LOG_TYPE_LABEL, type LogType } from "@/types/journal";
-
-// 폴더 없음 묶음을 가리키는 ?group= 값. 폴더 id(uuid)와 겹치지 않는다.
-const UNGROUPED_PARAM = "none";
 
 // 카드에 공통으로 들어가는 건수 요약.
 function CountSummary({ items }: { items: ChecklistItem[] }) {

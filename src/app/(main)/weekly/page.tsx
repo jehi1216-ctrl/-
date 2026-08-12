@@ -44,6 +44,16 @@ interface WeeklyItem {
   result?: string | null; // 일지에 적어둔 결과
 }
 
+// 이 줄을 고칠 수 있는 화면. 일정은 캘린더 날짜 패널에서, 일지는 `/journal` 맨 위
+// 미처리 모아보기에서 고친다(수정 폼이 그 자리에서 열린다).
+// 날짜 없는 일정은 있을 수 없지만, 없으면 달 없이 캘린더로만 보낸다.
+function editHref(item: WeeklyItem, projectId: string): string {
+  if (item.isSchedule) {
+    return item.date ? `/calendar?date=${item.date}` : "/calendar";
+  }
+  return projectId ? `/journal?project=${projectId}` : "/journal";
+}
+
 interface ProjectGroup {
   id: string; // 빈 문자열이면 프로젝트 없는 일정 묶음
   name: string;
@@ -280,7 +290,10 @@ export default async function WeeklyPage({
                           {BUCKET_LABEL[item.bucket]}
                         </p>
                       )}
-                      <div className="flex items-start gap-2">
+                      {/* 이 화면은 읽기 전용이라 고칠 폼이 없다. 대신 그 항목을 실제로
+                          고칠 수 있는 화면으로 보낸다 — 일지는 미처리 모아보기(수정 버튼이
+                          거기 있다), 일정은 그 날이 펼쳐진 캘린더(날짜 패널에서 고친다). */}
+                      <div className="relative flex items-start gap-2 rounded-md hover:bg-gray-50">
                         <span
                           className={`mt-0.5 flex-shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${
                             badge?.className ?? "bg-gray-100 text-gray-400"
@@ -304,9 +317,14 @@ export default async function WeeklyPage({
                                 일정
                               </span>
                             )}
-                            <span className="align-middle" title={item.hint}>
+                            {/* ::after가 줄 전체를 덮어 어디를 눌러도 넘어간다. */}
+                            <Link
+                              href={editHref(item, group.id)}
+                              title={item.hint ?? "눌러서 고치기"}
+                              className="align-middle after:absolute after:inset-0 hover:underline"
+                            >
                               {item.label}
-                            </span>
+                            </Link>
                           </span>
                           {item.result && (
                             // 답변 대기는 '지금 어디까지 와 있나'가 핵심이라 결과를
@@ -318,7 +336,7 @@ export default async function WeeklyPage({
                                   : "border-l-2 border-gray-200 pl-2 text-gray-500"
                               }`}
                             >
-                              <span className="font-semibold">결과 </span>
+                              <span className="font-semibold">코멘트 </span>
                               {item.result}
                             </p>
                           )}

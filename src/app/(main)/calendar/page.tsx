@@ -18,11 +18,16 @@ import type { Project } from "@/types/project";
 export default async function CalendarPage({
   searchParams,
 }: {
-  searchParams: Promise<{ month?: string }>;
+  searchParams: Promise<{ month?: string; date?: string }>;
 }) {
-  const { month: monthParam } = await searchParams;
+  const { month: monthParam, date: dateParam } = await searchParams;
+  // `?date=`로 들어오면 그 날이 든 달을 편다 — 달을 따로 맞춰 보내지 않아도 되게.
+  const initialDate =
+    dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam) ? dateParam : undefined;
   const month =
-    monthParam && /^\d{4}-\d{2}$/.test(monthParam) ? monthParam : currentMonthKST();
+    monthParam && /^\d{4}-\d{2}$/.test(monthParam)
+      ? monthParam
+      : (initialDate?.slice(0, 7) ?? currentMonthKST());
 
   const supabase = await createClient();
   const {
@@ -196,6 +201,7 @@ export default async function CalendarPage({
         entriesByDate={Object.fromEntries(itemsByDate)}
         projects={projectList}
         today={todayKST()}
+        initialDate={initialDate}
       />
     </div>
   );

@@ -9,6 +9,7 @@ import {
   CHECKLIST_STATUS_OPTIONS,
   CHECKLIST_STATUS_BADGE_CLASS,
   NO_GROUP_LABEL,
+  UNGROUPED_PARAM,
   buildingCoverageRatio,
   floorAreaRatio,
   formatArea,
@@ -123,44 +124,54 @@ export default function ProjectListTabs({
               count: openLogCounts[p.id]?.[status] ?? 0,
             })).filter((c) => c.count > 0);
             return (
-              <li key={p.id}>
-                <Link
-                  href={`/projects/${p.id}`}
-                  className="block rounded-lg border border-gray-200 bg-white p-4 shadow-sm hover:border-brand-300"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <h2 className="font-medium">{p.name}</h2>
-                    <span
-                      className={`flex-shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${PHASE_BADGE_CLASS[p.phase]}`}
-                    >
-                      {PHASE_LABEL[p.phase]}
-                    </span>
+              // 카드 안의 배지들이 저마다 다른 화면으로 가야 해서 카드 전체를 <Link>로
+              // 감쌀 수 없다. 제목 링크의 ::after가 카드를 덮어 빈 곳을 눌러도 프로젝트로
+              // 들어가고, 그 위에 얹힌 링크들(relative)이 각자 제 화면으로 보낸다.
+              <li
+                key={p.id}
+                className="relative rounded-lg border border-gray-200 bg-white p-4 shadow-sm hover:border-brand-300"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <h2 className="font-medium">
+                    <Link href={`/projects/${p.id}`} className="after:absolute after:inset-0">
+                      {p.name}
+                    </Link>
+                  </h2>
+                  <span
+                    className={`flex-shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${PHASE_BADGE_CLASS[p.phase]}`}
+                  >
+                    {PHASE_LABEL[p.phase]}
+                  </span>
+                </div>
+                {(p.client || p.site_address) && (
+                  <p className="mt-1 text-sm text-gray-500">
+                    {[p.client, p.site_address].filter(Boolean).join(" · ")}
+                  </p>
+                )}
+                {area && <p className="mt-1 text-xs text-gray-400">{area}</p>}
+                {logCounts.length > 0 && (
+                  <div className="mt-2 flex flex-wrap items-center gap-1">
+                    <span className="mr-0.5 text-xs text-gray-400">일지</span>
+                    {logCounts.map(({ status, count }) => (
+                      <Link
+                        key={status}
+                        href={`/journal?project=${p.id}`}
+                        title={`${STATUS_LABEL[status]} ${count}건 보기`}
+                        className={`relative rounded-full px-1.5 py-0.5 text-xs font-medium hover:opacity-80 ${STATUS_BADGE_CLASS[status]}`}
+                      >
+                        {STATUS_LABEL[status]} {count}
+                      </Link>
+                    ))}
                   </div>
-                  {(p.client || p.site_address) && (
-                    <p className="mt-1 text-sm text-gray-500">
-                      {[p.client, p.site_address].filter(Boolean).join(" · ")}
-                    </p>
-                  )}
-                  {area && <p className="mt-1 text-xs text-gray-400">{area}</p>}
-                  {logCounts.length > 0 && (
-                    <div className="mt-2 flex flex-wrap items-center gap-1">
-                      <span className="mr-0.5 text-xs text-gray-400">일지</span>
-                      {logCounts.map(({ status, count }) => (
-                        <span
-                          key={status}
-                          className={`rounded-full px-1.5 py-0.5 text-xs font-medium ${STATUS_BADGE_CLASS[status]}`}
-                        >
-                          {STATUS_LABEL[status]} {count}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  {folders.length > 0 && (
-                    <ul className="mt-2 space-y-1 border-t border-gray-100 pt-2">
-                      {folders.map((folder) => (
-                        <li
-                          key={folder.key}
-                          className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-xs"
+                )}
+                {folders.length > 0 && (
+                  <ul className="mt-2 space-y-1 border-t border-gray-100 pt-2">
+                    {folders.map((folder) => (
+                      <li key={folder.key}>
+                        <Link
+                          href={`/checklist?project=${p.id}&group=${folder.key || UNGROUPED_PARAM}`}
+                          title={`${folder.key ? folder.name : NO_GROUP_LABEL} 항목 보기`}
+                          className="relative -mx-1 flex flex-wrap items-center justify-between gap-x-2 gap-y-1 rounded px-1 py-0.5 text-xs hover:bg-gray-50"
                         >
                           <span className="min-w-0 truncate text-gray-600">
                             {folder.key ? `📁 ${folder.name}` : folder.name}
@@ -178,11 +189,11 @@ export default function ProjectListTabs({
                               </span>
                             ))}
                           </span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </Link>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </li>
             );
           })}

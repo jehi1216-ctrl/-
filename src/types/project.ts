@@ -125,6 +125,10 @@ export interface ChecklistGroup {
 // 폴더에 담기지 않은 항목을 모아 보여줄 때 쓰는 이름.
 export const NO_GROUP_LABEL = "폴더 없음";
 
+// '폴더 없음' 묶음을 가리키는 /checklist?group= 값. 폴더 id(uuid)와 겹치지 않는다.
+// 체크리스트 화면과 프로젝트 카드가 같은 링크를 만들어야 해서 여기에 둔다.
+export const UNGROUPED_PARAM = "none";
+
 // 체크리스트 담당자로 '나'를 고른 경우. 협력업체가 아니라 본인이므로
 // assignee_contact_id는 비우고 레거시 자유 입력 칸(assignee)에 이 문구를 넣는다.
 // 덕분에 표시/그룹핑 폴백이 그대로 동작하고 마이그레이션도 필요 없다.

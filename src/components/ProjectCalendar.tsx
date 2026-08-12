@@ -14,6 +14,7 @@ import {
   parseDecisionDates,
   type WorkLog,
 } from "@/types/journal";
+import { logChipLabel, isNumberedAgenda } from "@/lib/categoryDisplay";
 import type { ScheduleItem } from "@/types/schedule";
 import type { ProjectFile } from "@/types/project";
 import ProjectCalendarDayPanel from "./ProjectCalendarDayPanel";
@@ -25,14 +26,21 @@ const MAX_CHIPS = 3;
 // 대신 항목의 종류로 색을 나눈다. 전역 캘린더처럼 완성된 클래스 문자열로 둬야 Tailwind가 찾는다.
 const CHIP_CLASS = {
   log: "border-l-brand-500 bg-brand-50 text-brand-800",
+  // 회차가 붙은 안건은 기록의 한 종류이지 다른 갈래가 아니다. 그래서 새 색을 들이지 않고
+  // 같은 brand 계열을 꽉 채워 쓴다 — 옅은 기록 칩 사이에서 혼자 진해 바로 눈에 걸린다.
+  // 새 색을 쓰면 amber(할 일)·violet(답변 대기)·emerald(종료)·red(지남)와 뜻이 겹친다.
+  agenda: "border-l-brand-900 bg-brand-600 font-medium text-white",
   todo: "border-l-amber-500 bg-amber-100 text-amber-900",
   // 종료(STATUS_BADGE_CLASS.done)와 같은 초록 계열을 써서 상태 색과 어긋나지 않게 한다.
   decision: "border-l-emerald-500 bg-emerald-100 text-emerald-900",
-  schedule: "border-l-gray-400 bg-gray-100 text-gray-600",
+  // 남은 채도 있는 색 중 위 넷과 가장 안 헷갈리는 것이 rose다. 지남 배지의 red는
+  // 다른 화면(미처리 모아보기·주간 업무)에만 나오므로 이 달력에서는 부딪히지 않는다.
+  schedule: "border-l-rose-500 bg-rose-100 text-rose-900",
 } as const;
 
 const LEGEND = [
   { kind: "log", label: "기록" },
+  { kind: "agenda", label: "안건(회차)" },
   { kind: "todo", label: "할 일 마감" },
   { kind: "decision", label: "협의된 날짜" },
   { kind: "schedule", label: "일정" },
@@ -135,10 +143,12 @@ export default function ProjectCalendar({
       map.set(date, [
         ...bucket.logs.map((log) => ({
           id: log.id,
-          kind: "log" as const,
+          // 회차가 붙은 안건은 색을 달리 준다. 판정은 칩 문구와 같은 곳에서 온다.
+          kind: isNumberedAgenda(log) ? ("agenda" as const) : ("log" as const),
           // 기록은 '그날 적었다'는 뜻이라 시각이 없다.
           time: "",
-          text: log.content,
+          // 칸에서는 본문이 잘려 뜻을 잃는다 — 안건 이름, 없으면 카테고리를 쓴다.
+          text: logChipLabel(log),
           muted: false,
           waiting: log.status === "waiting",
         })),

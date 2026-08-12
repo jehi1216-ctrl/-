@@ -15,15 +15,24 @@ export default function CalendarGrid({
   entriesByDate,
   projects,
   today,
+  initialDate,
 }: {
   weeks: CalendarCell[][];
   entriesByDate: Record<string, CalendarEntry[]>;
   projects: { id: string; name: string }[];
   today: string;
+  // 주간 업무에서 `?date=`로 들어온 날. 그 날짜를 펼친 채로 시작한다.
+  initialDate?: string;
 }) {
   // 칸이 좁아 내용이 잘리므로, 날짜를 누르면 아래에 그날 항목을 전문으로 펼치고
   // 거기서 바로 고칠 수 있게 한다.
-  const [selected, setSelected] = useState<string | null>(null);
+  // 이 달 그리드에 없는 날짜로 들어오면 무시하고 아무것도 펼치지 않는다 —
+  // 없는 날을 펼치면 빈 패널만 뜬다.
+  const [selected, setSelected] = useState<string | null>(
+    initialDate && weeks.some((w) => w.some((c) => c.date === initialDate))
+      ? initialDate
+      : null
+  );
 
   return (
     <div className="space-y-4">
