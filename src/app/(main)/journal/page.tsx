@@ -4,6 +4,7 @@ import { formatDateLabel, todayKST } from "@/lib/date";
 import JournalEntryCard from "@/components/JournalEntryCard";
 import ProjectFilterSelect from "@/components/ProjectFilterSelect";
 import OpenLogsSection from "@/components/OpenLogsSection";
+import JournalSearchBox from "@/components/JournalSearchBox";
 import {
   compareOpenLogs,
   isOpenLog,
@@ -185,7 +186,17 @@ export default async function JournalPage({
             </Link>
           </p>
         )}
+        {searchTokens.length > 0 && (
+          <p className="mt-1 text-sm text-brand-700">
+            ‘{searchLabel}’ 검색 중 ·{" "}
+            <Link href={buildHref({ q: undefined })} className="underline">
+              해제
+            </Link>
+          </p>
+        )}
       </div>
+
+      <JournalSearchBox />
 
       <div className="flex flex-wrap items-center gap-2">
         <Link
@@ -278,7 +289,9 @@ export default async function JournalPage({
 
       {grouped.length === 0 ? (
         <p className="rounded-lg border border-dashed border-gray-300 p-6 text-center text-sm text-gray-400">
-          조건에 맞는 건축일지가 없어요.
+          {searchTokens.length > 0
+            ? `‘${searchLabel}’에 맞는 건축일지가 없어요.`
+            : "조건에 맞는 건축일지가 없어요."}
         </p>
       ) : (
         <div className="space-y-8">
