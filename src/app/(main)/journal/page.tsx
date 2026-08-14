@@ -4,6 +4,7 @@ import { formatDateLabel, todayKST } from "@/lib/date";
 import JournalEntryCard from "@/components/JournalEntryCard";
 import ProjectFilterSelect from "@/components/ProjectFilterSelect";
 import OpenLogsSection from "@/components/OpenLogsSection";
+import JournalSearchBox from "@/components/JournalSearchBox";
 import {
   compareOpenLogs,
   isOpenLog,
@@ -19,6 +20,7 @@ import {
   type WorkLog,
 } from "@/types/journal";
 import type { Project, ProjectFile } from "@/types/project";
+import { parseQuery, matchesQuery } from "@/lib/logSearch";
 
 function groupByDate(logs: WorkLog[]) {
   const groups = new Map<string, WorkLog[]>();
@@ -54,6 +56,7 @@ export default async function JournalPage({
     sub?: string;
     project?: string;
     date?: string;
+    q?: string;
   }>;
 }) {
   const supabase = await createClient();
@@ -67,7 +70,12 @@ export default async function JournalPage({
     sub: activeSub,
     project: activeProject,
     date: activeDate,
+    q: rawQuery,
   } = await searchParams;
+
+  // 공백뿐인 검색어는 토큰이 0개가 되어 아무것도 거르지 않는다.
+  const searchTokens = parseQuery(rawQuery);
+  const searchLabel = rawQuery?.trim() ?? "";
 
   const activeType =
     activeTypeRaw === "design" || activeTypeRaw === "build" ? (activeTypeRaw as LogType) : undefined;
@@ -78,6 +86,7 @@ export default async function JournalPage({
     sub?: string;
     project?: string;
     date?: string;
+    q?: string;
   }) {
     const params = new URLSearchParams();
     const next = {
@@ -86,6 +95,7 @@ export default async function JournalPage({
       sub: activeSub,
       project: activeProject,
       date: activeDate,
+      q: rawQuery,
       ...overrides,
     };
     if (next.type) params.set("type", next.type);
@@ -93,6 +103,7 @@ export default async function JournalPage({
     if (next.sub) params.set("sub", next.sub);
     if (next.project) params.set("project", next.project);
     if (next.date) params.set("date", next.date);
+    if (next.q) params.set("q", next.q);
     const qs = params.toString();
     return qs ? `/journal?${qs}` : "/journal";
   }
@@ -133,6 +144,10 @@ export default async function JournalPage({
     allLogs = allLogs.filter((log) => getSubValues(log, activeCategory).includes(activeSub));
   }
 
+  if (searchTokens.length > 0) {
+    allLogs = allLogs.filter((log) => matchesQuery(log, searchTokens));
+  }
+
   const grouped = groupByDate(allLogs);
 
   // 모아보기는 별도 조회 없이 지금 보고 있는 목록에서 뽑는다 — 필터를 걸면 함께 좁혀진다.
@@ -171,7 +186,17 @@ export default async function JournalPage({
             </Link>
           </p>
         )}
+        {searchTokens.length > 0 && (
+          <p className="mt-1 text-sm text-brand-700">
+            ‘{searchLabel}’ 검색 중 ·{" "}
+            <Link href={buildHref({ q: undefined })} className="underline">
+              해제
+            </Link>
+          </p>
+        )}
       </div>
+
+      <JournalSearchBox />
 
       <div className="flex flex-wrap items-center gap-2">
         <Link
@@ -264,7 +289,9 @@ export default async function JournalPage({
 
       {grouped.length === 0 ? (
         <p className="rounded-lg border border-dashed border-gray-300 p-6 text-center text-sm text-gray-400">
-          조건에 맞는 건축일지가 없어요.
+          {searchTokens.length > 0
+            ? `‘${searchLabel}’에 맞는 건축일지가 없어요.`
+            : "조건에 맞는 건축일지가 없어요."}
         </p>
       ) : (
         <div className="space-y-8">
