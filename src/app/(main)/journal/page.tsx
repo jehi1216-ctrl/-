@@ -19,6 +19,7 @@ import {
   type WorkLog,
 } from "@/types/journal";
 import type { Project, ProjectFile } from "@/types/project";
+import { parseQuery, matchesQuery } from "@/lib/logSearch";
 
 function groupByDate(logs: WorkLog[]) {
   const groups = new Map<string, WorkLog[]>();
@@ -54,6 +55,7 @@ export default async function JournalPage({
     sub?: string;
     project?: string;
     date?: string;
+    q?: string;
   }>;
 }) {
   const supabase = await createClient();
@@ -67,7 +69,12 @@ export default async function JournalPage({
     sub: activeSub,
     project: activeProject,
     date: activeDate,
+    q: rawQuery,
   } = await searchParams;
+
+  // 공백뿐인 검색어는 토큰이 0개가 되어 아무것도 거르지 않는다.
+  const searchTokens = parseQuery(rawQuery);
+  const searchLabel = rawQuery?.trim() ?? "";
 
   const activeType =
     activeTypeRaw === "design" || activeTypeRaw === "build" ? (activeTypeRaw as LogType) : undefined;
@@ -78,6 +85,7 @@ export default async function JournalPage({
     sub?: string;
     project?: string;
     date?: string;
+    q?: string;
   }) {
     const params = new URLSearchParams();
     const next = {
@@ -86,6 +94,7 @@ export default async function JournalPage({
       sub: activeSub,
       project: activeProject,
       date: activeDate,
+      q: rawQuery,
       ...overrides,
     };
     if (next.type) params.set("type", next.type);
@@ -93,6 +102,7 @@ export default async function JournalPage({
     if (next.sub) params.set("sub", next.sub);
     if (next.project) params.set("project", next.project);
     if (next.date) params.set("date", next.date);
+    if (next.q) params.set("q", next.q);
     const qs = params.toString();
     return qs ? `/journal?${qs}` : "/journal";
   }
@@ -131,6 +141,10 @@ export default async function JournalPage({
 
   if (activeSub && activeCategory && activeType !== "build" && SUBCATEGORY_OPTIONS[activeCategory]) {
     allLogs = allLogs.filter((log) => getSubValues(log, activeCategory).includes(activeSub));
+  }
+
+  if (searchTokens.length > 0) {
+    allLogs = allLogs.filter((log) => matchesQuery(log, searchTokens));
   }
 
   const grouped = groupByDate(allLogs);
